@@ -64,7 +64,7 @@ ${P}lembretes — ver os seus · ${P}cancelar <número> — cancelar
 ${P}enquete <pergunta> | <opção 1> | <opção 2> — ${P}enquete+ deixa marcar mais de uma
 
 *🎡 Sorteio*
-${P}sorteio <opção 1>, <opção 2>, <opção 3> — elimina uma por vez até sobrar a vencedora
+${P}sorteio <opção 1>, <opção 2>, <opção 3> — vai eliminando até sobrar a vencedora
 
 *🎁 Retrospectiva do ano*
 ${P}wrapped — a do grupo · ${P}wrapped eu — a sua

@@ -4,7 +4,8 @@ import { randomInt } from 'node:crypto';
 
 export const COMANDOS_ROLETA = ['sorteio', 'roleta', 'sortear'];
 const MAX_OPCOES = 30;
-const PAUSA_MS = 4_000;               // tempo entre uma eliminação e outra
+const MAX_EDICOES = 8;                 // edições seguidas parecem robô: com muita opção, sai mais de uma por rodada
+const pausa = () => 3_500 + randomInt(2_000);   // 3,5 a 5,5 s entre rodadas (ritmo menos mecânico)
 const rodando = new Set();             // um sorteio por conversa de cada vez
 const espera = ms => new Promise(r => setTimeout(r, ms));
 
@@ -20,10 +21,20 @@ export function lerOpcoes(texto) {
     });
 }
 
-function tela(opcoes, eliminadas, rodada, ultima) {
+// Quantas opções saem em cada rodada: no máximo MAX_EDICOES rodadas, mais no começo,
+// e a última rodada sempre tira só uma (o suspense fica pro final). Ex.: 30 opções → 4,4,4,4,4,4,4,1
+export function planoDeRodadas(n) {
+    const total = Math.min(MAX_EDICOES, n - 1);
+    if (total <= 1) return n > 1 ? [n - 1] : [];
+    const antes = total - 1, tirar = n - 2;
+    const base = Math.floor(tirar / antes), extra = tirar % antes;
+    return [...Array.from({ length: antes }, (_, i) => base + (i < extra ? 1 : 0)), 1];
+}
+
+function tela(opcoes, eliminadas, rodada, ultimas) {
     const linhas = opcoes.map(o => (eliminadas.includes(o) ? `❌ ~${o}~` : `✅ ${o}`));
-    return `🎡 *ROLETA DO REGRESSO* — rodada ${rodada}\n\n${linhas.join('\n')}` +
-        (ultima ? `\n\n💥 Saiu: *${ultima}*` : '\n\nRodando...');
+    const saiu = ultimas?.length ? `\n\n💥 Saiu: ${ultimas.map(o => `*${o}*`).join(', ')}` : '\n\nRodando...';
+    return `🎡 *ROLETA DO REGRESSO* — rodada ${rodada}\n\n${linhas.join('\n')}${saiu}`;
 }
 
 export async function tratarRoleta(sock, msg, texto) {
@@ -33,7 +44,7 @@ export async function tratarRoleta(sock, msg, texto) {
 
     if (opcoes.length < 2) {
         return responder('🎡 *Roleta de eliminação*\nMande as opções separadas por vírgula (ou uma por linha):\n' +
-            '*!sorteio opção 1, opção 2, opção 3*\n\nO bot vai eliminando uma por rodada até sobrar a vencedora.');
+            '*!sorteio opção 1, opção 2, opção 3*\n\nO bot vai eliminando até sobrar a vencedora.');
     }
     if (opcoes.length > MAX_OPCOES) return responder(`Muita opção! O máximo é ${MAX_OPCOES}.`);
     if (rodando.has(chat)) return responder('⏳ Já tem uma roleta rodando aqui. Espera ela terminar.');
@@ -45,10 +56,11 @@ export async function tratarRoleta(sock, msg, texto) {
         let enviada = await sock.sendMessage(chat, { text: tela(opcoes, eliminadas, 0) }, { quoted: msg });
         let rodada = 0;
 
-        while (restantes.length > 1) {
-            await espera(PAUSA_MS);
-            const [saiu] = restantes.splice(randomInt(restantes.length), 1);
-            eliminadas.push(saiu);
+        for (const quantas of planoDeRodadas(opcoes.length)) {
+            await espera(pausa());
+            const saiu = [];
+            for (let k = 0; k < quantas; k++) saiu.push(restantes.splice(randomInt(restantes.length), 1)[0]);
+            eliminadas.push(...saiu);
             rodada++;
             const texto = tela(opcoes, eliminadas, rodada, saiu);
             // Edita a mesma mensagem; se o WhatsApp não deixar, manda uma nova e segue editando ela.
