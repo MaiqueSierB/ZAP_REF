@@ -15,7 +15,7 @@ function novidades(atual, antes, prefixo) {
         .sort((a, c) => c.novos - a.novos);
 }
 
-export function montarRetro() {
+function montarRetro() {
     const atual = b.contadoresAtuais();
     const antes = b.fotoAnterior();
     const partes = ['📰 *Retrospectiva da semana no Regresso*'];

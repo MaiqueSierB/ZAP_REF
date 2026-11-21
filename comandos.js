@@ -4,6 +4,7 @@ import * as b from './bancos.js';
 import { buscarFilmes, buscarJogos, antiJanja } from './apis.js';
 import config from './config.js';
 import { identificarTime } from './times.js';
+import { buscarGratis, textoGratis } from './epic.js';
 
 const P = config.prefixo;
 const fmtNota = n => (n == null ? '—' : Number(n).toFixed(1));
@@ -29,6 +30,7 @@ ${P}top filmes — melhores do servidor
 ${P}game elden ring — procura o jogo
 ${P}nota 1 9 zerei — nota (+ joguei, zerei ou platinei)
 ${P}top games — melhores do servidor
+${P}gratis — jogos grátis na Epic agora (o grupo também é avisado sozinho)
 
 *⚽ Bolão do Brasileirão*
 ${P}bolao — próximos jogos abertos
@@ -128,6 +130,11 @@ export async function tratar(texto, remetente, chatId) {
             if (!lista.length) return 'Ainda não tem nada avaliado.';
             return `${jogos ? '🎮 *Top games do servidor*' : '🎬 *Top filmes e séries do servidor*'}\n` +
                 lista.map((x, i) => `*${i + 1}.* ${x.title} — ⭐ ${fmtNota(x.server_score)} (${x.vote_count})`).join('\n');
+        }
+
+        case 'gratis': case 'epic': {
+            const lista = await buscarGratis();
+            return lista.length ? lista.map(textoGratis).join('\n\n') : 'Nenhum jogo grátis na Epic agora.';
         }
 
         case 'bolao': case 'jogos': {
