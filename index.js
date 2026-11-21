@@ -8,6 +8,8 @@ import config from './config.js';
 import { tratar } from './comandos.js';
 import { quemE } from './bancos.js';
 import { verificarAniversarios } from './aniversarios.js';
+import { pegarTrava } from './trava.js';
+import path from 'node:path';
 
 const logger = pino({ level: 'silent' });
 let estado = 'iniciando';
@@ -72,7 +74,7 @@ async function conectar() {
             estado = `desconectado (${codigo ?? '?'})`;
             if (codigo === DisconnectReason.loggedOut) {
                 if (sock.authState.creds.registered) {
-                    console.error('Sessão encerrada no celular (logout). Limpando a sessão para parear de novo.');
+                    console.error('Sessão encerrada pelo WhatsApp (logout). Limpando a sessão para parear de novo.');
                 }
                 // Sessão inválida ou pareamento não concluído: apaga e recomeça (gera código novo).
                 fs.rmSync(config.authDir, { recursive: true, force: true });
@@ -124,7 +126,8 @@ http.createServer((req, res) => {
     res.end(JSON.stringify({ ok, estado }));
 }).listen(Number(process.env.PORT || 3000), () => console.log(`Health check na porta ${process.env.PORT || 3000}`));
 
-conectar().catch(e => {
+// Só conecta depois de garantir que nenhum outro processo está usando a sessão.
+pegarTrava(path.join(path.dirname(config.authDir), 'zap.lock')).then(() => conectar()).catch(e => {
     estado = 'erro';
     console.error('Falha ao iniciar o WhatsApp:', e);
 });
