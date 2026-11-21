@@ -9,6 +9,7 @@ import { tratar } from './comandos.js';
 import { quemE } from './bancos.js';
 import { verificarAniversarios } from './aniversarios.js';
 import { pegarTrava } from './trava.js';
+import { postarEventos } from './aovivo.js';
 import path from 'node:path';
 
 const logger = pino({ level: 'silent' });
@@ -67,6 +68,9 @@ async function conectar() {
             const checar = () => verificarAniversarios(sock).catch(e => console.error('Aniversários:', e.message));
             setTimeout(checar, 10_000);
             if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
+            // Avisos de gol/fim de jogo (gerados pelo bot do bolão) a cada 30s
+            if (!globalThis.timerAoVivo) globalThis.timerAoVivo = setInterval(
+                () => postarEventos(sock).catch(e => console.error('Avisos de jogo:', e.message)), 30_000);
         }
 
         if (connection === 'close') {

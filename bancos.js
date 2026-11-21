@@ -200,3 +200,54 @@ export function marcarAnivEnviado(userId, dataISO) {
 export function zapIdsDe(discordId) {
     return db('zap').prepare('SELECT zap_id FROM vinculos WHERE discord_id = ?').all(discordId).map(r => r.zap_id);
 }
+
+// ---------- Futebol: tabela, rodada, time do coração, avisos ao vivo ----------
+export function bolaoTabela() {
+    return db('bolao')?.prepare('SELECT * FROM tabela ORDER BY posicao').all() ?? [];
+}
+
+export function bolaoRodada(numero = null) {
+    const d = db('bolao');
+    if (!d) return { rodada: null, jogos: [] };
+    const t = d.prepare('SELECT MAX(temporada) AS t FROM jogos').get()?.t;
+    const rodada = numero ?? d.prepare(`SELECT MIN(rodada) AS r FROM jogos WHERE temporada = ? AND rodada IS NOT NULL
+        AND status NOT IN ('FINISHED','CANCELLED','AWARDED')`).get(t)?.r
+        ?? d.prepare('SELECT MAX(rodada) AS r FROM jogos WHERE temporada = ?').get(t)?.r;
+    const jogos = rodada == null ? [] : d.prepare('SELECT * FROM jogos WHERE temporada = ? AND rodada = ? ORDER BY data_utc, id').all(t, rodada);
+    // Placar ao vivo da ESPN, quando houver (a football-data gratuita é atrasada)
+    const vivos = d.prepare("SELECT * FROM ao_vivo WHERE atualizado > datetime('now', '-1 day')").all();
+    return { rodada, jogos, vivos };
+}
+
+export function bolaoDefinirTime(discordId, time) {
+    db('bolao').prepare(`INSERT INTO times_favoritos (discord_id, time_key, time_nome) VALUES (?, ?, ?)
+        ON CONFLICT(discord_id) DO UPDATE SET time_key = excluded.time_key, time_nome = excluded.time_nome`)
+        .run(discordId, time.key, time.nome);
+}
+
+export function bolaoRemoverTime(discordId) {
+    return db('bolao').prepare('DELETE FROM times_favoritos WHERE discord_id = ?').run(discordId).changes > 0;
+}
+
+export function bolaoMeuTime(discordId) {
+    return db('bolao')?.prepare('SELECT * FROM times_favoritos WHERE discord_id = ?').get(discordId) ?? null;
+}
+
+export function eventosPendentesZap() {
+    // Só avisos recentes (se o Zap ficou fora do ar, não despeja gol velho no grupo)
+    return db('bolao')?.prepare("SELECT * FROM eventos WHERE zap_ok = 0 AND criado > datetime('now', '-20 minutes') ORDER BY id").all() ?? [];
+}
+
+export function marcarZap(id) {
+    db('bolao').prepare('UPDATE eventos SET zap_ok = 1 WHERE id = ?').run(id);
+}
+
+export function descartarEventosAntigosZap() {
+    db('bolao')?.prepare("UPDATE eventos SET zap_ok = 1 WHERE zap_ok = 0 AND criado <= datetime('now', '-20 minutes')").run();
+}
+
+export function torcedoresDe(timesCsv) {
+    const keys = timesCsv.split(',').filter(Boolean);
+    if (!keys.length || !db('bolao')) return [];
+    return db('bolao').prepare(`SELECT * FROM times_favoritos WHERE time_key IN (${keys.map(() => '?').join(',')})`).all(...keys);
+}

@@ -5,6 +5,7 @@ Conecta um número de WhatsApp (via [Baileys](https://baileys.wiki), não oficia
 - **RMDB** — `!filme nome`, `!nota 1 8.5`, `!top filmes`
 - **RGDB** — `!game nome`, `!nota 1 9 zerei`, `!top games`
 - **Bolão** — `!bolao`, `!palpite 1 2x1`, `!meuspalpites`, `!ranking`
+- **Brasileirão** — `!tabela`, `!rodada`, `!meutime time` (marca no grupo quando sai gol ou acaba jogo do seu time; qualquer time brasileiro)
 - **Anti Janja** — `!transmitir` cria uma sala e posta o link; `!parar` encerra
 - **Aniversários** — posta o parabéns no grupo (a partir das 9h, marcando quem vinculou o Zap), lendo o banco do bot de aniversários
 - **Vínculo** — `/zap` no Discord gera um código; `!vincular CÓDIGO` no grupo liga o número ao perfil do Discord

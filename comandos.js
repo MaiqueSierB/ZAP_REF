@@ -3,6 +3,7 @@
 import * as b from './bancos.js';
 import { buscarFilmes, buscarJogos, antiJanja } from './apis.js';
 import config from './config.js';
+import { identificarTime } from './times.js';
 
 const P = config.prefixo;
 const fmtNota = n => (n == null ? '—' : Number(n).toFixed(1));
@@ -34,6 +35,11 @@ ${P}palpite 1 2x1 2 0x0 — um ou vários jogos
 ${P}palpite 2x1 0x0 1x1 — placares na ordem da lista
 ${P}meuspalpites — seus últimos palpites
 ${P}ranking — ranking geral
+
+*🏆 Brasileirão*
+${P}tabela — classificação
+${P}rodada — jogos e placares da rodada (ou ${P}rodada 35)
+${P}meutime flamengo — avisa gol e fim de jogo do seu time (${P}meutime nenhum para parar)
 
 *📺 Anti Janja (transmissão de tela)*
 ${P}transmitir — cria uma sala e manda o link aqui
@@ -172,6 +178,49 @@ export async function tratar(texto, remetente, chatId) {
             if (!lista.length) return 'Ninguém pontuou no bolão ainda.';
             const med = i => ['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`;
             return '🏆 *Ranking do bolão*\n' + lista.map((r, i) => `${med(i)} ${r.nome} — *${r.pontos} pts* (${r.exatos} na mosca)`).join('\n');
+        }
+
+        case 'tabela': case 'classificacao': {
+            const t = b.bolaoTabela();
+            if (!t.length) return 'Ainda não tenho a tabela. Tenta daqui a pouco.';
+            const pad = (v, n) => String(v).padStart(n);
+            return '🏆 *Brasileirão — Classificação*\n```\n #  Time          Pts  J  SG\n' +
+                t.map(l => `${pad(l.posicao, 2)}  ${l.time.slice(0, 12).padEnd(12)} ${pad(l.pontos, 3)} ${pad(l.jogos, 2)} ${pad((l.saldo > 0 ? '+' : '') + l.saldo, 3)}`).join('\n') +
+                '\n```';
+        }
+
+        case 'rodada': {
+            const n = Number(resto[0]) || null;
+            const { rodada, jogos, vivos = [] } = b.bolaoRodada(n);
+            if (!jogos.length) return 'Não achei jogos dessa rodada.';
+            const vivoDe = j => {
+                const ck = identificarTime(j.casa)?.key, fk = identificarTime(j.fora)?.key;
+                return vivos.find(v => v.casa_key && v.casa_key === ck && v.fora_key === fk);
+            };
+            return `⚽ *Rodada ${rodada}*\n` + jogos.map(j => {
+                const v = vivoDe(j);
+                if (v && v.estado === 'in') return `🔴 ${j.casa} *${v.gols_casa} x ${v.gols_fora}* ${j.fora} (ao vivo)`;
+                if (j.status === 'FINISHED' && j.gols_casa != null) return `✅ ${j.casa} *${j.gols_casa} x ${j.gols_fora}* ${j.fora}`;
+                if (v && v.estado === 'post') return `✅ ${j.casa} *${v.gols_casa} x ${v.gols_fora}* ${j.fora}`;
+                if (['POSTPONED', 'SUSPENDED', 'CANCELLED'].includes(j.status)) return `⏸️ ${j.casa} x ${j.fora} (adiado)`;
+                return `🕒 ${j.casa} x ${j.fora} — ${fmtData(j.data_utc)}`;
+            }).join('\n');
+        }
+
+        case 'meutime': case 'time': {
+            if (!quem) return precisaVinculo;
+            if (!arg) {
+                const atual = b.bolaoMeuTime(quem.discord_id);
+                return atual ? `Seu time: *${atual.time_nome}*. Pra trocar: ${P}meutime nome do time` : `Use: ${P}meutime flamengo`;
+            }
+            if (/^(nenhum|nada|parar|sair)$/i.test(arg)) {
+                b.bolaoRemoverTime(quem.discord_id);
+                return '🔕 Pronto, sem avisos de gol pra você.';
+            }
+            const time = identificarTime(arg);
+            if (!time) return 'Não reconheci esse time. Tenta o nome do clube (ex.: flamengo, atletico mineiro, sao paulo).';
+            b.bolaoDefinirTime(quem.discord_id, time);
+            return `✅ Time do coração: *${time.nome}*. Vou te marcar aqui quando sair gol ou acabar jogo dele (e o bot do Discord te avisa no privado).`;
         }
 
         case 'transmitir': case 'live': {
