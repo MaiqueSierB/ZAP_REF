@@ -17,7 +17,7 @@ function abrir(arquivo, { criar = false } = {}) {
 const cache = {};
 function db(nome) {
     if (cache[nome]) return cache[nome];
-    const arquivo = { zap: config.zapDb, rmdb: config.rmdbDb, rgdb: config.rgdbDb, bolao: config.bolaoDb }[nome];
+    const arquivo = { zap: config.zapDb, rmdb: config.rmdbDb, rgdb: config.rgdbDb, bolao: config.bolaoDb, aniv: config.anivDb }[nome];
     const aberto = abrir(arquivo, { criar: nome === 'zap' });
     if (aberto) cache[nome] = aberto;
     return aberto;
@@ -30,6 +30,11 @@ db('zap').exec(`
         discord_id  TEXT NOT NULL,
         nome        TEXT,
         criado      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS aniv_enviados (
+        user_id     TEXT NOT NULL,
+        data        TEXT NOT NULL,      -- AAAA-MM-DD (Brasília)
+        PRIMARY KEY (user_id, data)
     );
     CREATE TABLE IF NOT EXISTS codigos (
         codigo      TEXT PRIMARY KEY,   -- gerado pelo /zap no Discord
@@ -177,4 +182,21 @@ export function bolaoRanking(n = 10) {
         FROM palpites p JOIN jogos j ON j.id = p.jogo_id
         WHERE j.temporada = ? GROUP BY p.user_id
         ORDER BY pontos DESC, exatos DESC LIMIT ?`).all(t, n);
+}
+
+// ---------- Aniversários ----------
+export function aniversariantesDoDia(ddmm, dataISO) {
+    const d = db('aniv');
+    if (!d) return [];
+    return d.prepare('SELECT name, user_id, image_url FROM birthdays WHERE birthday = ?').all(ddmm)
+        .filter(a => !db('zap').prepare('SELECT 1 FROM aniv_enviados WHERE user_id = ? AND data = ?').get(a.user_id, dataISO));
+}
+
+export function marcarAnivEnviado(userId, dataISO) {
+    db('zap').prepare('INSERT OR IGNORE INTO aniv_enviados (user_id, data) VALUES (?, ?)').run(userId, dataISO);
+}
+
+// IDs do WhatsApp vinculados a uma conta do Discord (para marcar a pessoa)
+export function zapIdsDe(discordId) {
+    return db('zap').prepare('SELECT zap_id FROM vinculos WHERE discord_id = ?').all(discordId).map(r => r.zap_id);
 }

@@ -7,6 +7,7 @@ import makeWASocket, {
 import config from './config.js';
 import { tratar } from './comandos.js';
 import { quemE } from './bancos.js';
+import { verificarAniversarios } from './aniversarios.js';
 
 const logger = pino({ level: 'silent' });
 let estado = 'iniciando';
@@ -60,6 +61,10 @@ async function conectar() {
             estado = 'conectado';
             tentativas = 0;
             console.log(`✅ WhatsApp conectado como ${sock.user?.id}`);
+            // Confere aniversários agora e de 30 em 30 minutos (um único timer por processo).
+            const checar = () => verificarAniversarios(sock).catch(e => console.error('Aniversários:', e.message));
+            setTimeout(checar, 10_000);
+            if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
         }
 
         if (connection === 'close') {

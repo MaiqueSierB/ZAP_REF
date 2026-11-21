@@ -6,6 +6,7 @@ Conecta um número de WhatsApp (via [Baileys](https://baileys.wiki), não oficia
 - **RGDB** — `!game nome`, `!nota 1 9 zerei`, `!top games`
 - **Bolão** — `!bolao`, `!palpite 1 2x1`, `!meuspalpites`, `!ranking`
 - **Anti Janja** — `!transmitir` cria uma sala e posta o link; `!parar` encerra
+- **Aniversários** — posta o parabéns no grupo (a partir das 9h, marcando quem vinculou o Zap), lendo o banco do bot de aniversários
 - **Vínculo** — `/zap` no Discord gera um código; `!vincular CÓDIGO` no grupo liga o número ao perfil do Discord
 
 `!ajuda` lista tudo. Funciona no grupo e no privado (no privado, só para quem já vinculou; desconhecidos só podem usar `!vincular`). Comandos desconhecidos são ignorados.

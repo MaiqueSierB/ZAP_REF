@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// Datas (aniversários, bolão) no horário de Brasília
+process.env.TZ = process.env.TZ || 'America/Sao_Paulo';
+
 // Pasta dos bots na Hostinger (fora da public_html, não some nos deploys)
 const BASE = process.env.BOTS_DIR || '/home/u243267678/domains/mrbnexus.com.br';
 
@@ -30,6 +33,9 @@ const config = {
     rmdbDb: process.env.RMDB_DB || `${BASE}/rmdb-data/servidor.sqlite`,
     rgdbDb: process.env.RGDB_DB || `${BASE}/rgdb-data/servidor.sqlite`,
     bolaoDb: process.env.BOLAO_DB || `${BASE}/bolao-data/bolao.sqlite`,
+    anivDb: process.env.ANIV_DB || `${BASE}/aniversario-data/servidor.sqlite`,
+    // hora (Brasília) a partir da qual o parabéns é postado no grupo
+    anivHora: Number(process.env.ANIV_HORA ?? 9),
 
     antijanjaUrl: process.env.ANTIJANJA_URL || 'https://antijanja.mrbnexus.com.br',
     antijanjaKeyFile: process.env.ANTIJANJA_KEY_FILE || `${BASE}/zap-data/antijanja.key`,
