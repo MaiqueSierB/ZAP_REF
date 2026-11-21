@@ -31,6 +31,9 @@ const config = {
     rgdbDb: process.env.RGDB_DB || `${BASE}/rgdb-data/servidor.sqlite`,
     bolaoDb: process.env.BOLAO_DB || `${BASE}/bolao-data/bolao.sqlite`,
 
+    antijanjaUrl: process.env.ANTIJANJA_URL || 'https://antijanja.mrbnexus.com.br',
+    antijanjaKeyFile: process.env.ANTIJANJA_KEY_FILE || `${BASE}/zap-data/antijanja.key`,
+
     tmdbKey: process.env.TMDB_API_KEY || lerChave(rmdbEnv, 'TMDB_API_KEY'),
     rawgKey: process.env.RAWG_API_KEY || lerChave(rgdbEnv, 'RAWG_API_KEY')
 };

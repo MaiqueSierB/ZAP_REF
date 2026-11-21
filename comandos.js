@@ -1,7 +1,7 @@
 // Lógica dos comandos do WhatsApp. Recebe o texto e quem mandou, devolve a resposta.
 // Não depende do Baileys, então dá pra testar sozinho.
 import * as b from './bancos.js';
-import { buscarFilmes, buscarJogos } from './apis.js';
+import { buscarFilmes, buscarJogos, antiJanja } from './apis.js';
 import config from './config.js';
 
 const P = config.prefixo;
@@ -33,6 +33,10 @@ ${P}bolao — próximos jogos abertos
 ${P}palpite 1 2x1 — palpite no jogo 1 da lista
 ${P}meuspalpites — seus últimos palpites
 ${P}ranking — ranking geral
+
+*📺 Anti Janja (transmissão de tela)*
+${P}transmitir — cria uma sala e manda o link aqui
+${P}parar — encerra a sua sala
 
 *🔗 Conta*
 ${P}vincular 123456 — liga seu Zap ao Discord (gere o código com /zap no Discord)
@@ -153,6 +157,20 @@ export async function tratar(texto, remetente, chatId) {
             if (!lista.length) return 'Ninguém pontuou no bolão ainda.';
             const med = i => ['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`;
             return '🏆 *Ranking do bolão*\n' + lista.map((r, i) => `${med(i)} ${r.nome} — *${r.pontos} pts* (${r.exatos} na mosca)`).join('\n');
+        }
+
+        case 'transmitir': case 'live': {
+            if (!quem) return precisaVinculo;
+            const r = await antiJanja('POST', quem.discord_id);
+            return `📺 *Sala do Anti Janja ${r.nova ? 'criada' : 'já estava aberta'}* por ${quem.nome}!\n${r.link}\n\n` +
+                `Qualquer um com o link pode assistir e transmitir a própria tela (pelo computador). ` +
+                `A sala expira em ${r.expiraMin} min. Pra encerrar: *${P}parar*`;
+        }
+
+        case 'parar': {
+            if (!quem) return precisaVinculo;
+            const r = await antiJanja('DELETE', quem.discord_id);
+            return r.encerrada ? '⏹️ Sala encerrada. Todo mundo foi desconectado.' : 'Você não tem sala aberta.';
         }
 
         default:

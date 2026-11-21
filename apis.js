@@ -1,4 +1,5 @@
 // Buscas no TMDB (filmes/séries) e na RAWG (jogos), com os mesmos filtros dos bots do Discord.
+import fs from 'node:fs';
 import config from './config.js';
 
 export async function buscarFilmes(nome) {
@@ -31,4 +32,22 @@ export async function buscarJogos(nome) {
         titulo: g.name,
         ano: (g.released || '').slice(0, 4)
     }));
+}
+
+// Salas de transmissão do Anti Janja (API interna, chave compartilhada por arquivo)
+function chaveAntiJanja() {
+    try { return fs.readFileSync(config.antijanjaKeyFile, 'utf8').trim(); } catch { return null; }
+}
+
+export async function antiJanja(metodo, ownerId) {
+    const chave = chaveAntiJanja();
+    if (!chave) throw new Error('chave do Anti Janja não encontrada');
+    const url = metodo === 'POST' ? `${config.antijanjaUrl}/api/salas` : `${config.antijanjaUrl}/api/salas/${ownerId}`;
+    const res = await fetch(url, {
+        method: metodo,
+        headers: { 'x-api-key': chave, 'Content-Type': 'application/json' },
+        body: metodo === 'POST' ? JSON.stringify({ ownerId }) : undefined
+    });
+    if (!res.ok) throw new Error(`Anti Janja respondeu ${res.status}`);
+    return res.json();
 }
