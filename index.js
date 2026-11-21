@@ -12,6 +12,7 @@ import { pegarTrava } from './trava.js';
 import { postarEventos } from './aovivo.js';
 import { verificarRetro } from './retro.js';
 import { verificarEpic } from './epic.js';
+import { tratarFigurinha, COMANDOS_FIGURINHA } from './figurinha.js';
 import path from 'node:path';
 
 const logger = pino({ level: 'silent' });
@@ -118,6 +119,12 @@ async function conectar() {
 
                 // No privado, só atende quem já vinculou a conta (menos risco de ban); desconhecidos só podem !vincular.
                 if (!grupo && !quemE(ids) && cmd !== 'vincular') continue;
+
+                // Figurinha precisa da mensagem inteira (foto/vídeo), não só do texto
+                if (COMANDOS_FIGURINHA.includes(cmd)) {
+                    await tratarFigurinha(sock, msg, ids[0]);
+                    continue;
+                }
                 const resposta = await tratar(texto, { ids, nome: msg.pushName }, chatId);
                 if (resposta) await sock.sendMessage(chatId, { text: resposta }, { quoted: msg });
             } catch (e) {

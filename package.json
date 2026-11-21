@@ -1,7 +1,7 @@
 {
   "name": "regresso-zap",
   "version": "1.0.0",
-  "description": "Bot de WhatsApp do Regresso: notas de filmes (RMDB), jogos (RGDB) e bolão do Brasileirão",
+  "description": "Bot de WhatsApp do Regresso: notas de filmes (RMDB), jogos (RGDB) e bolão do Brasileirão, figurinhas",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -16,5 +16,9 @@
     "better-sqlite3": "^12.2.0",
     "dotenv": "^16.4.5",
     "pino": "^9.6.0"
+  },
+  "optionalDependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "sharp": "^0.34.4"
   }
 }

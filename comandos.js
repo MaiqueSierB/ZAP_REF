@@ -49,6 +49,9 @@ ${P}meutime flamengo — avisa gol e fim de jogo do seu time (${P}meutime nenhum
 ${P}transmitir — cria uma sala e manda o link aqui
 ${P}parar — encerra a sua sala
 
+*🖼️ Figurinha*
+Manda foto, GIF ou vídeo (até 15s) com a legenda *${P}figurinha* (ou *${P}f*) — ou responde a uma foto/vídeo com *${P}f*
+
 *🔗 Conta*
 ${P}vincular 123456 — liga seu Zap ao Discord (gere o código com /zap no Discord)
 ${P}desvincular — desfaz o vínculo`;
