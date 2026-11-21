@@ -30,7 +30,8 @@ ${P}top games — melhores do servidor
 
 *⚽ Bolão do Brasileirão*
 ${P}bolao — próximos jogos abertos
-${P}palpite 1 2x1 — palpite no jogo 1 da lista
+${P}palpite 1 2x1 2 0x0 — um ou vários jogos
+${P}palpite 2x1 0x0 1x1 — placares na ordem da lista
 ${P}meuspalpites — seus últimos palpites
 ${P}ranking — ranking geral
 
@@ -127,19 +128,33 @@ export async function tratar(texto, remetente, chatId) {
             ultimoBolao.set(chave, lista);
             return `⚽ *Bolão — próximos jogos*\n` +
                 lista.map((j, i) => `*${i + 1}.* ${j.casa} x ${j.fora} — ${fmtData(j.data_utc)} (R${j.rodada})`).join('\n') +
-                `\n\nPra palpitar: *${P}palpite 1 2x1*`;
+                `\n\nPra palpitar: *${P}palpite 1 2x1* ou vários: *${P}palpite 2x1 0x0 1x1* (na ordem da lista)`;
         }
 
-        case 'palpite': case 'palpitar': {
+        case 'palpite': case 'palpitar': case 'palpites': {
             if (!quem) return precisaVinculo;
-            const m = arg.match(/^(\d+)\s+(\d{1,2})\s*[xX×-]\s*(\d{1,2})$/);
-            if (!m) return `Use: *${P}palpite 1 2x1* (número do jogo na lista do ${P}bolao e o placar)`;
             const lista = ultimoBolao.get(chave) || b.bolaoAbertos(10);
-            const j = lista[Number(m[1]) - 1];
-            if (!j) return `Número inválido. Veja a lista com *${P}bolao*.`;
-            const ok = b.bolaoPalpitar(j.id, quem.discord_id, quem.nome, Number(m[2]), Number(m[3]));
-            return ok ? `✅ Palpite: *${j.casa} ${m[2]} x ${m[3]} ${j.fora}*. Dá pra mudar até o apito inicial.`
-                : '❌ Esse jogo já começou ou não aceita mais palpites.';
+            const placar = String.raw`(\d{1,2})\s*[xX×-]\s*(\d{1,2})`;
+            // Formato 1: "1 2x1 2 0x0 3 1x1" (número do jogo + placar, quantos quiser, também um por linha)
+            let pares = [...arg.matchAll(new RegExp(String.raw`(\d+)\s+` + placar, 'g'))]
+                .map(m => ({ n: Number(m[1]), casa: Number(m[2]), fora: Number(m[3]) }));
+            // Formato 2: só os placares "2x1 0x0 1x1" — vale na ordem da lista do !bolao
+            const soPlacares = new RegExp(String.raw`^\s*(` + placar + String.raw`\s*)+$`).test(arg);
+            if (soPlacares) {
+                pares = [...arg.matchAll(new RegExp(placar, 'g'))]
+                    .map((m, i) => ({ n: i + 1, casa: Number(m[1]), fora: Number(m[2]) }));
+            }
+            if (!pares.length) {
+                return `Use *${P}palpite 1 2x1* — ou vários de uma vez: *${P}palpite 1 2x1 2 0x0 3 1x1*\n` +
+                    `Ou só os placares na ordem do *${P}bolao*: *${P}palpite 2x1 0x0 1x1*`;
+            }
+            const linhas = pares.map(({ n, casa, fora }) => {
+                const j = lista[n - 1];
+                if (!j) return `❌ Jogo ${n}: não existe na lista`;
+                const ok = b.bolaoPalpitar(j.id, quem.discord_id, quem.nome, casa, fora);
+                return ok ? `✅ ${j.casa} *${casa} x ${fora}* ${j.fora}` : `❌ ${j.casa} x ${j.fora}: já começou`;
+            });
+            return `⚽ *Palpites de ${quem.nome}*\n${linhas.join('\n')}\n\nDá pra mudar até o apito inicial.`;
         }
 
         case 'meuspalpites': case 'meus': {
