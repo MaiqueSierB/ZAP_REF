@@ -173,7 +173,7 @@ export function bolaoRanking(n = 10) {
     const t = d.prepare('SELECT MAX(temporada) AS t FROM jogos').get()?.t;
     return d.prepare(`
         SELECT MAX(p.username) AS nome, COALESCE(SUM(p.pontos), 0) AS pontos,
-               SUM(CASE WHEN p.pontos = 10 THEN 1 ELSE 0 END) AS exatos
+               SUM(CASE WHEN p.pontos = 25 THEN 1 ELSE 0 END) AS exatos
         FROM palpites p JOIN jogos j ON j.id = p.jogo_id
         WHERE j.temporada = ? GROUP BY p.user_id
         ORDER BY pontos DESC, exatos DESC LIMIT ?`).all(t, n);
