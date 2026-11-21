@@ -14,6 +14,7 @@ const fmtData = iso => new Date(iso).toLocaleString('pt-BR', {
 // Última lista mostrada para cada pessoa (para "!nota 2 8" e "!palpite 3 2x1")
 const ultimaBusca = new Map();   // chave remetente -> { tipo: 'filme'|'jogo', itens, quando }
 const ultimoBolao = new Map();   // chave remetente -> [jogos]
+const ultimoApagar = new Map();  // chave remetente -> [palpites abertos]
 const EXPIRA = 30 * 60_000;
 
 const AJUDA =
@@ -33,7 +34,8 @@ ${P}top games — melhores do servidor
 ${P}bolao — próximos jogos abertos
 ${P}palpite 1 2x1 2 0x0 — um ou vários jogos
 ${P}palpite 2x1 0x0 1x1 — placares na ordem da lista
-${P}meuspalpites — seus últimos palpites
+${P}meuspalpites — seus últimos palpites (📱 = feito pelo Zap, 💻 = Discord)
+${P}apagar — lista seus palpites que dá pra apagar; ${P}apagar 1 apaga
 ${P}ranking — ranking geral
 
 *🏆 Brasileirão*
@@ -168,9 +170,24 @@ export async function tratar(texto, remetente, chatId) {
             const lista = b.bolaoMeus(quem.discord_id);
             if (!lista.length) return 'Você ainda não palpitou.';
             return '⚽ *Seus últimos palpites*\n' + lista.map(p =>
-                `${p.casa} x ${p.fora}: ${p.p_casa}x${p.p_fora}` +
+                `${p.casa} x ${p.fora}: ${p.p_casa}x${p.p_fora} ${p.origem === 'zap' ? '📱' : p.origem === 'discord' ? '💻' : ''}` +
                 (p.gols_casa != null && p.status === 'FINISHED' ? ` → deu ${p.gols_casa}x${p.gols_fora}, *${p.pontos ?? 0} pts*` : '')
             ).join('\n');
+        }
+
+        case 'apagar': {
+            if (!quem) return precisaVinculo;
+            const n = Number(resto[0]);
+            if (!n) {
+                const lista = b.bolaoPalpitesAbertos(quem.discord_id);
+                if (!lista.length) return 'Você não tem palpite em jogo que ainda não começou.';
+                ultimoApagar.set(chave, lista);
+                return '🗑️ *Qual palpite apagar?*\n' + lista.map((p, i) => `*${i + 1}.* ${p.casa} ${p.p_casa} x ${p.p_fora} ${p.fora} — ${fmtData(p.data_utc)}`).join('\n') +
+                    `\n\nMande *${P}apagar 1* (o número da lista).`;
+            }
+            const p = (ultimoApagar.get(chave) || b.bolaoPalpitesAbertos(quem.discord_id))[n - 1];
+            if (!p) return `Número inválido. Veja a lista com *${P}apagar*.`;
+            return b.bolaoApagar(p.id, quem.discord_id) ? `🗑️ Apagado: ${p.casa} x ${p.fora}.` : '❌ Esse jogo já começou; não dá mais pra apagar.';
         }
 
         case 'ranking': {

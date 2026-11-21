@@ -156,18 +156,33 @@ export function bolaoPalpitar(jogoId, discordId, nome, casa, fora) {
     const j = d.prepare('SELECT * FROM jogos WHERE id = ?').get(jogoId);
     if (!j || !['SCHEDULED', 'TIMED'].includes(j.status) || j.data_utc <= agora()) return null;
     d.prepare(`
-        INSERT INTO palpites (jogo_id, user_id, username, gols_casa, gols_fora, atualizado)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        INSERT INTO palpites (jogo_id, user_id, username, gols_casa, gols_fora, atualizado, origem)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), 'zap')
         ON CONFLICT(jogo_id, user_id) DO UPDATE SET gols_casa = excluded.gols_casa, gols_fora = excluded.gols_fora,
-            username = excluded.username, atualizado = excluded.atualizado
+            username = excluded.username, atualizado = excluded.atualizado, origem = excluded.origem
     `).run(jogoId, discordId, nome, casa, fora);
     return j;
+}
+
+// Palpites em jogos que ainda não começaram (para o !apagar)
+export function bolaoPalpitesAbertos(discordId) {
+    return db('bolao')?.prepare(`
+        SELECT j.id, j.casa, j.fora, j.data_utc, p.gols_casa AS p_casa, p.gols_fora AS p_fora
+        FROM palpites p JOIN jogos j ON j.id = p.jogo_id
+        WHERE p.user_id = ? AND j.status IN ('SCHEDULED','TIMED') AND j.data_utc > ?
+        ORDER BY j.data_utc LIMIT 15`).all(discordId, agora()) ?? [];
+}
+
+export function bolaoApagar(jogoId, discordId) {
+    return db('bolao').prepare(`DELETE FROM palpites WHERE jogo_id = ? AND user_id = ?
+        AND jogo_id IN (SELECT id FROM jogos WHERE status IN ('SCHEDULED','TIMED') AND data_utc > ?)`)
+        .run(jogoId, discordId, agora()).changes > 0;
 }
 
 export function bolaoMeus(discordId) {
     return db('bolao')?.prepare(`
         SELECT j.casa, j.fora, j.data_utc, j.status, j.gols_casa, j.gols_fora,
-               p.gols_casa AS p_casa, p.gols_fora AS p_fora, p.pontos
+               p.gols_casa AS p_casa, p.gols_fora AS p_fora, p.pontos, p.origem
         FROM palpites p JOIN jogos j ON j.id = p.jogo_id
         WHERE p.user_id = ? ORDER BY j.data_utc DESC LIMIT 10`).all(discordId) ?? [];
 }
