@@ -1,6 +1,7 @@
 // Lógica dos comandos do WhatsApp. Recebe o texto e quem mandou, devolve a resposta.
 // Não depende do Baileys, então dá pra testar sozinho.
 import * as b from './bancos.js';
+import * as extras from './extras.js';
 import { buscarFilmes, buscarJogos, antiJanja } from './apis.js';
 import config from './config.js';
 import { identificarTime } from './times.js';
@@ -27,6 +28,9 @@ Todo comando começa com *${P}*. Onde está entre < >, troque pelo que você que
 ${P}filme <nome> — procura e mostra a nota do grupo
 ${P}nota <número> <nota> — avalia um da lista que apareceu (ex.: ${P}nota 1 8)
 ${P}top filmes — os mais bem avaliados do grupo
+${P}onde <nome> — em qual streaming está
+${P}recomenda <filme> — filmes parecidos com um que você curtiu
+${P}assistir <filme> — põe na sua lista "quero ver" · ${P}lista — ver · ${P}tirar <filme> — tirar
 
 *🎮 Jogos*
 ${P}game <nome> — procura o jogo
@@ -68,6 +72,10 @@ ${P}sorteio <opção 1>, <opção 2>, <opção 3> — vai eliminando até sobrar
 
 *🎁 Retrospectiva do ano*
 ${P}wrapped — a do grupo · ${P}wrapped eu — a sua
+
+*👤 Você*
+${P}perfil — seu resumo (notas, XP, bolão, time, aniversário)
+${P}niver <dia/mês> — cadastra seu aniversário (ex.: ${P}niver 05/09)
 
 *🔗 Ligar ao Discord* (precisa pra notas e bolão)
 No Discord, use /zap e mande aqui: ${P}vincular <código>
@@ -277,6 +285,26 @@ export async function tratar(texto, remetente, chatId) {
             b.bolaoDefinirTime(quem.discord_id, time);
             return `✅ Time do coração: *${time.nome}*. Vou te marcar aqui quando sair gol ou acabar jogo dele (e o bot do Discord te avisa no privado).`;
         }
+
+        case 'assistir': case 'querover':
+            if (!quem) return precisaVinculo;
+            return extras.assistir(quem.discord_id, arg);
+        case 'lista': case 'minhalista':
+            if (!quem) return precisaVinculo;
+            return extras.lista(quem.discord_id);
+        case 'tirar':
+            if (!quem) return precisaVinculo;
+            return extras.tirar(quem.discord_id, arg);
+        case 'onde': case 'ondeassistir':
+            return extras.onde(arg);
+        case 'recomenda': case 'recomendar': case 'parecido':
+            return extras.recomenda(arg);
+        case 'perfil': case 'eu':
+            if (!quem) return precisaVinculo;
+            return extras.perfil(quem);
+        case 'niver': case 'aniversario':
+            if (!quem) return precisaVinculo;
+            return extras.niver(quem, arg);
 
         case 'transmitir': case 'live': {
             if (!quem) return precisaVinculo;
