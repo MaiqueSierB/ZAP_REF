@@ -69,7 +69,7 @@ const CLUBES = [
     ['botafogo', 'Botafogo', ['botafogo', 'fogao']]   // por último: depois de Botafogo-SP/PB
 ];
 
-// Devolve { key, nome } ou null
+// Devolve { key, nome } ou null (cópia do times.js do bot do bolão, que também tem a lista para o /meutime)
 export function identificarTime(texto) {
     const t = ` ${semAcento(texto).replace(/[^a-z0-9-]+/g, ' ').trim()} `;
     if (!t.trim()) return null;
@@ -81,4 +81,3 @@ export function identificarTime(texto) {
     return null;
 }
 
-export const listaTimes = () => CLUBES.map(([key, nome]) => ({ key, nome }));

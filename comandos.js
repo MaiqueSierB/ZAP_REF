@@ -16,7 +16,7 @@ const ultimaBusca = new Map();   // chave remetente -> { tipo: 'filme'|'jogo', i
 const ultimoBolao = new Map();   // chave remetente -> [jogos]
 const EXPIRA = 30 * 60_000;
 
-export const AJUDA =
+const AJUDA =
 `*🤖 Bot do Regresso no Zap*
 
 *🎬 Filmes e séries (RMDB)*
