@@ -41,6 +41,14 @@ db('zap').exec(`
         chave TEXT PRIMARY KEY,         -- f:<filme> j:<jogo> uf:<usuário filmes> uj:<usuário jogos>
         valor INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS lembretes (
+        id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat    TEXT NOT NULL,
+        autor   TEXT NOT NULL,              -- id do WhatsApp de quem pediu (para marcar)
+        texto   TEXT NOT NULL,
+        quando  INTEGER NOT NULL,           -- epoch ms
+        enviado INTEGER NOT NULL DEFAULT 0
+    );
     CREATE TABLE IF NOT EXISTS estado (
         chave TEXT PRIMARY KEY,
         valor TEXT
@@ -338,4 +346,26 @@ export function aniversariosProximos() {
     }
     return d.prepare(`SELECT name, birthday FROM birthdays WHERE birthday IN (${dias.map(() => '?').join(',')})`).all(...dias)
         .sort((a, b) => dias.indexOf(a.birthday) - dias.indexOf(b.birthday));
+}
+
+// ---------- Lembretes ----------
+export function criarLembrete(chat, autor, texto, quando) {
+    return db('zap').prepare('INSERT INTO lembretes (chat, autor, texto, quando) VALUES (?, ?, ?, ?)').run(chat, autor, texto, quando).lastInsertRowid;
+}
+
+export function lembretesPendentes(autor) {
+    return db('zap').prepare('SELECT * FROM lembretes WHERE autor = ? AND enviado = 0 ORDER BY quando').all(autor);
+}
+
+export function cancelarLembrete(id, autor) {
+    return db('zap').prepare('DELETE FROM lembretes WHERE id = ? AND autor = ? AND enviado = 0').run(id, autor).changes > 0;
+}
+
+export function lembretesVencidos() {
+    return db('zap').prepare('SELECT * FROM lembretes WHERE enviado = 0 AND quando <= ? ORDER BY quando').all(Date.now());
+}
+
+export function marcarLembrete(id) {
+    db('zap').prepare('UPDATE lembretes SET enviado = 1 WHERE id = ?').run(id);
+    db('zap').prepare("DELETE FROM lembretes WHERE enviado = 1 AND quando < ?").run(Date.now() - 7 * 86_400_000);
 }

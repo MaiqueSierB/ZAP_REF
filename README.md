@@ -8,7 +8,9 @@ Conecta um número de WhatsApp (via [Baileys](https://baileys.wiki), não oficia
 - **Brasileirão** — `!tabela`, `!rodada`, `!meutime time` (marca no grupo quando sai gol ou acaba jogo do seu time; qualquer time brasileiro)
 - **Anti Janja** — `!transmitir` cria uma sala e posta o link; `!parar` encerra
 - **Aniversários** — posta o parabéns no grupo (a partir das 9h, marcando quem vinculou o Zap), lendo o banco do bot de aniversários
-- **Figurinhas** — foto, GIF ou vídeo (até 15s) com legenda `!figurinha` / `!f`, ou respondendo à mídia; vira figurinha (sharp + ffmpeg, opcionais)
+- **Figurinhas** — foto, GIF ou vídeo (até 15s) com legenda `!f` (ou respondendo à mídia); `!f texto` põe legenda estilo meme; `!print` respondendo a uma mensagem vira figurinha-citação com o nome de quem falou (sharp + ffmpeg, opcionais; fonte DejaVu Sans em `fontes/`)
+- **Enquete** — `!enquete Pergunta | op1 | op2` (enquete nativa; `!enquete+` permite várias)
+- **Lembretes** — `!lembrar sexta 20h racha`, `!lembrar 30min pizza`; `!lembretes`, `!cancelar N`
 - **Roleta** — `!sorteio a, b, c` (ou uma opção por linha): edita a mesma mensagem riscando uma opção por rodada até sobrar a vencedora
 - **Jogos grátis** — avisa no grupo (9h–22h) quando a Epic libera jogo grátis; `!gratis` mostra os atuais
 - **Retrospectiva** — domingo 20h: filmes/jogos avaliados na semana, quem mais avaliou, bolão da semana e aniversários seguintes

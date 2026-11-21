@@ -12,7 +12,9 @@ import { pegarTrava } from './trava.js';
 import { postarEventos } from './aovivo.js';
 import { verificarRetro } from './retro.js';
 import { verificarEpic } from './epic.js';
-import { tratarFigurinha, COMANDOS_FIGURINHA } from './figurinha.js';
+import { tratarFigurinha, tratarPrint, lembrarNome, COMANDOS_FIGURINHA, COMANDOS_PRINT } from './figurinha.js';
+import { tratarEnquete, COMANDOS_ENQUETE } from './enquete.js';
+import { enviarLembretes } from './lembretes.js';
 import { tratarRoleta, COMANDOS_ROLETA } from './roleta.js';
 import path from 'node:path';
 
@@ -77,6 +79,8 @@ async function conectar() {
             setTimeout(checar, 10_000);
             if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
             // Avisos de gol/fim de jogo (gerados pelo bot do bolão) a cada 10s
+            if (!globalThis.timerLembretes) globalThis.timerLembretes = setInterval(
+                () => enviarLembretes(sock).catch(e => console.error('Lembretes:', e.message)), 20_000);
             if (!globalThis.timerAoVivo) globalThis.timerAoVivo = setInterval(
                 () => postarEventos(sock).catch(e => console.error('Avisos de jogo:', e.message)), 10_000);
         }
@@ -109,6 +113,8 @@ async function conectar() {
                 if (chatId === 'status@broadcast' || chatId.endsWith('@newsletter') || chatId.endsWith('@broadcast')) continue;
                 const grupo = chatId.endsWith('@g.us');
                 const texto = textoDa(msg);
+                // Guarda o nome de quem fala (o !print usa para assinar a figurinha)
+                for (const id of [msg.key.participant, msg.key.participantAlt, grupo ? null : chatId]) lembrarNome(id, msg.pushName);
                 if (!texto.startsWith(config.prefixo)) continue;
                 const cmd = texto.trim().slice(config.prefixo.length).split(/\s+/)[0].toLowerCase();
                 if (grupo && config.grupoId && chatId !== config.grupoId && cmd !== 'id') continue;
@@ -123,7 +129,15 @@ async function conectar() {
 
                 // Figurinha precisa da mensagem inteira (foto/vídeo), não só do texto
                 if (COMANDOS_FIGURINHA.includes(cmd)) {
-                    await tratarFigurinha(sock, msg, ids[0]);
+                    await tratarFigurinha(sock, msg, ids[0], texto);
+                    continue;
+                }
+                if (COMANDOS_PRINT.includes(cmd)) {
+                    await tratarPrint(sock, msg, ids[0]);
+                    continue;
+                }
+                if (COMANDOS_ENQUETE.includes(cmd)) {
+                    await tratarEnquete(sock, msg, texto);
                     continue;
                 }
                 // Roleta roda em segundo plano (edita a mesma mensagem por vários segundos)

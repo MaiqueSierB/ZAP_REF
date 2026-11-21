@@ -5,6 +5,7 @@ import { buscarFilmes, buscarJogos, antiJanja } from './apis.js';
 import config from './config.js';
 import { identificarTime } from './times.js';
 import { buscarGratis, textoGratis } from './epic.js';
+import * as lembretes from './lembretes.js';
 
 const P = config.prefixo;
 const fmtNota = n => (n == null ? '—' : Number(n).toFixed(1));
@@ -50,7 +51,16 @@ ${P}transmitir — cria uma sala e manda o link aqui
 ${P}parar — encerra a sua sala
 
 *🖼️ Figurinha*
-Manda foto, GIF ou vídeo (até 15s) com a legenda *${P}figurinha* (ou *${P}f*) — ou responde a uma foto/vídeo com *${P}f*
+Foto, GIF ou vídeo (até 15s) com a legenda *${P}f* — ou responde a uma mídia com *${P}f*
+*${P}f seu texto* — figurinha com legenda estilo meme
+Responde a uma mensagem com *${P}print* — vira figurinha com o nome de quem falou
+
+*⏰ Lembretes*
+${P}lembrar sexta 20h racha — também: 20h, amanhã 9h, 25/12 10h, 30min, em 2h
+${P}lembretes — os seus marcados · ${P}cancelar 12 — cancela
+
+*🗳️ Enquete*
+${P}enquete Pizza hoje? | Sim | Não — enquete do WhatsApp (${P}enquete+ deixa votar em várias)
 
 *🎡 Roleta*
 ${P}sorteio pizza, sushi, açaí — vai eliminando uma por rodada até sobrar a vencedora (ou uma opção por linha)
@@ -202,6 +212,17 @@ export async function tratar(texto, remetente, chatId) {
             if (!p) return `Número inválido. Veja a lista com *${P}apagar*.`;
             return b.bolaoApagar(p.id, quem.discord_id) ? `🗑️ Apagado: ${p.casa} x ${p.fora}.` : '❌ Esse jogo já começou; não dá mais pra apagar.';
         }
+
+        case 'lembrar': case 'lembrete': case 'lembra': {
+            const autor = remetente.ids.find(i => i.endsWith('@s.whatsapp.net')) || remetente.ids[0];
+            return lembretes.lembrar(arg, autor, chatId);
+        }
+
+        case 'lembretes':
+            return lembretes.listar(remetente.ids.find(i => i.endsWith('@s.whatsapp.net')) || remetente.ids[0]);
+
+        case 'cancelar':
+            return lembretes.cancelar(arg, remetente.ids.find(i => i.endsWith('@s.whatsapp.net')) || remetente.ids[0]);
 
         case 'ranking': {
             const lista = b.bolaoRanking(10);
