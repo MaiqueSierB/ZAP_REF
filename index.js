@@ -10,6 +10,7 @@ import { quemE } from './bancos.js';
 import { verificarAniversarios } from './aniversarios.js';
 import { pegarTrava } from './trava.js';
 import { postarEventos } from './aovivo.js';
+import { verificarRetro } from './retro.js';
 import path from 'node:path';
 
 const logger = pino({ level: 'silent' });
@@ -64,8 +65,11 @@ async function conectar() {
             estado = 'conectado';
             tentativas = 0;
             console.log(`✅ WhatsApp conectado como ${sock.user?.id}`);
-            // Confere aniversários agora e de 30 em 30 minutos (um único timer por processo).
-            const checar = () => verificarAniversarios(sock).catch(e => console.error('Aniversários:', e.message));
+            // Aniversários e retrospectiva semanal: agora e de 30 em 30 minutos (um único timer por processo).
+            const checar = () => {
+                verificarAniversarios(sock).catch(e => console.error('Aniversários:', e.message));
+                verificarRetro(sock).catch(e => console.error('Retrospectiva:', e.message));
+            };
             setTimeout(checar, 10_000);
             if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
             // Avisos de gol/fim de jogo (gerados pelo bot do bolão) a cada 10s

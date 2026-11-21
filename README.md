@@ -8,6 +8,7 @@ Conecta um número de WhatsApp (via [Baileys](https://baileys.wiki), não oficia
 - **Brasileirão** — `!tabela`, `!rodada`, `!meutime time` (marca no grupo quando sai gol ou acaba jogo do seu time; qualquer time brasileiro)
 - **Anti Janja** — `!transmitir` cria uma sala e posta o link; `!parar` encerra
 - **Aniversários** — posta o parabéns no grupo (a partir das 9h, marcando quem vinculou o Zap), lendo o banco do bot de aniversários
+- **Retrospectiva** — domingo 20h: filmes/jogos avaliados na semana, quem mais avaliou, bolão da semana e aniversários seguintes
 - **Vínculo** — `/zap` no Discord gera um código; `!vincular CÓDIGO` no grupo liga o número ao perfil do Discord
 
 `!ajuda` lista tudo. Funciona no grupo e no privado (no privado, só para quem já vinculou; desconhecidos só podem usar `!vincular`). Comandos desconhecidos são ignorados.

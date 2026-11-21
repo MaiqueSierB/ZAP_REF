@@ -36,6 +36,15 @@ db('zap').exec(`
         data        TEXT NOT NULL,      -- AAAA-MM-DD (Brasília)
         PRIMARY KEY (user_id, data)
     );
+    -- Retrospectiva semanal: "foto" dos contadores no último envio, para calcular o que mudou na semana
+    CREATE TABLE IF NOT EXISTS retro_foto (
+        chave TEXT PRIMARY KEY,         -- f:<filme> j:<jogo> uf:<usuário filmes> uj:<usuário jogos>
+        valor INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS estado (
+        chave TEXT PRIMARY KEY,
+        valor TEXT
+    );
     CREATE TABLE IF NOT EXISTS codigos (
         codigo      TEXT PRIMARY KEY,   -- gerado pelo /zap no Discord
         discord_id  TEXT NOT NULL,
@@ -265,4 +274,68 @@ export function torcedoresDe(timesCsv) {
     const keys = timesCsv.split(',').filter(Boolean);
     if (!keys.length || !db('bolao')) return [];
     return db('bolao').prepare(`SELECT * FROM times_favoritos WHERE time_key IN (${keys.map(() => '?').join(',')})`).all(...keys);
+}
+
+// ---------- Retrospectiva semanal ----------
+export function getEstado(chave) {
+    return db('zap').prepare('SELECT valor FROM estado WHERE chave = ?').get(chave)?.valor ?? null;
+}
+
+export function setEstado(chave, valor) {
+    db('zap').prepare('INSERT INTO estado (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor')
+        .run(chave, String(valor));
+}
+
+// Contadores atuais: votos por filme/jogo e votos por pessoa
+export function contadoresAtuais() {
+    const c = new Map();
+    for (const r of db('rmdb')?.prepare('SELECT movie_id AS id, vote_count AS n FROM avaliacoes_filmes').all() ?? []) c.set(`f:${r.id}`, r.n);
+    for (const r of db('rgdb')?.prepare('SELECT game_id AS id, vote_count AS n FROM avaliacoes_jogos').all() ?? []) c.set(`j:${r.id}`, r.n);
+    for (const r of db('rmdb')?.prepare('SELECT user_id AS id, COUNT(*) AS n FROM votos_filmes GROUP BY user_id').all() ?? []) c.set(`uf:${r.id}`, r.n);
+    for (const r of db('rgdb')?.prepare('SELECT user_id AS id, COUNT(*) AS n FROM votos_jogos GROUP BY user_id').all() ?? []) c.set(`uj:${r.id}`, r.n);
+    return c;
+}
+
+export function fotoAnterior() {
+    return new Map(db('zap').prepare('SELECT chave, valor FROM retro_foto').all().map(r => [r.chave, r.valor]));
+}
+
+export function salvarFoto(contadores) {
+    const d = db('zap');
+    d.transaction(() => {
+        d.prepare('DELETE FROM retro_foto').run();
+        const ins = d.prepare('INSERT INTO retro_foto (chave, valor) VALUES (?, ?)');
+        for (const [k, v] of contadores) ins.run(k, v);
+    })();
+}
+
+export const infoFilme = id => db('rmdb')?.prepare('SELECT title, server_score, vote_count FROM avaliacoes_filmes WHERE movie_id = ?').get(id);
+export const infoJogo = id => db('rgdb')?.prepare('SELECT title, server_score, vote_count FROM avaliacoes_jogos WHERE game_id = ?').get(id);
+export const nomeUsuario = id =>
+    db('rmdb')?.prepare('SELECT username FROM votos_filmes WHERE user_id = ? AND username IS NOT NULL LIMIT 1').get(id)?.username ??
+    db('rgdb')?.prepare('SELECT username FROM votos_jogos WHERE user_id = ? AND username IS NOT NULL LIMIT 1').get(id)?.username ?? 'alguém';
+
+// Pontos do bolão em jogos dos últimos 7 dias
+export function bolaoSemana() {
+    const d = db('bolao');
+    if (!d) return [];
+    const desde = new Date(Date.now() - 7 * 86_400_000).toISOString();
+    return d.prepare(`
+        SELECT MAX(p.username) AS nome, SUM(p.pontos) AS pontos, SUM(CASE WHEN p.pontos = 25 THEN 1 ELSE 0 END) AS exatos
+        FROM palpites p JOIN jogos j ON j.id = p.jogo_id
+        WHERE j.status = 'FINISHED' AND j.data_utc >= ? AND p.pontos IS NOT NULL
+        GROUP BY p.user_id ORDER BY pontos DESC, exatos DESC LIMIT 5`).all(desde);
+}
+
+// Aniversários dos próximos 7 dias (DD-MM)
+export function aniversariosProximos() {
+    const d = db('aniv');
+    if (!d) return [];
+    const dias = [];
+    for (let i = 1; i <= 7; i++) {
+        const x = new Date(Date.now() + i * 86_400_000);
+        dias.push(`${String(x.getDate()).padStart(2, '0')}-${String(x.getMonth() + 1).padStart(2, '0')}`);
+    }
+    return d.prepare(`SELECT name, birthday FROM birthdays WHERE birthday IN (${dias.map(() => '?').join(',')})`).all(...dias)
+        .sort((a, b) => dias.indexOf(a.birthday) - dias.indexOf(b.birthday));
 }
