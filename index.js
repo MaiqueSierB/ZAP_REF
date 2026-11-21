@@ -68,7 +68,7 @@ async function conectar() {
             const checar = () => verificarAniversarios(sock).catch(e => console.error('Aniversários:', e.message));
             setTimeout(checar, 10_000);
             if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
-            // Avisos de gol/fim de jogo (gerados pelo bot do bolão) a cada 30s
+            // Avisos de gol/fim de jogo (gerados pelo bot do bolão) a cada 10s
             if (!globalThis.timerAoVivo) globalThis.timerAoVivo = setInterval(
                 () => postarEventos(sock).catch(e => console.error('Avisos de jogo:', e.message)), 30_000);
         }
