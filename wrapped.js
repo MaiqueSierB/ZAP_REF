@@ -435,7 +435,7 @@ a{color:#fff}.pessoas a{display:inline-block;background:rgba(255,255,255,.15);pa
 <script>
 const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting||e.target.classList.contains('vis'))return;
 e.target.classList.add('vis');e.target.querySelectorAll('.num').forEach(n=>{const v=+n.dataset.v,c=+n.dataset.c,t0=performance.now();
-const f=t=>{const k=Math.min(1,(t-t0)/1100);n.textContent=(v*(1-Math.pow(1-k,3))).toFixed(c);if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)})}),{threshold:.35});
+const f=t=>{const k=Math.max(0,Math.min(1,(t-t0)/1100));n.textContent=(v*(1-Math.pow(1-k,3))).toFixed(c);if(k<1)requestAnimationFrame(f)};requestAnimationFrame(f)})}),{threshold:.35});
 document.querySelectorAll('section').forEach(s=>io.observe(s));
 </script></body></html>`;
 }
@@ -532,7 +532,7 @@ export function paginaGrupo(d) {
     if (extremos.length) s.push(slide(i++, `<div class="k">Treta e unanimidade</div><h2>O que dividiu o grupo</h2>${extremos.join('')}`));
 
     if (d.bolao.ranking.length) {
-        s.push(slide(i++, `<div class="k">Bolão ${d.bolao.temporada}</div><h2>Classificação final</h2><ul class="lista">${d.bolao.ranking.slice(0, 8).map(r => {
+        s.push(slide(i++, `<div class="k">Bolão ${d.bolao.temporada}</div><h2>${d.previa ? 'Classificação até agora' : 'Classificação final'}</h2><ul class="lista">${d.bolao.ranking.slice(0, 8).map(r => {
             const p = d.pessoas.find(x => x.id === r.user_id);
             return `<li><span class="pos">${r.posicao}</span><span>${esc(p?.nome ?? r.nome)}</span><span class="nota">${r.pontos} pts</span></li>`;
         }).join('')}</ul>`));
