@@ -52,6 +52,9 @@ ${P}parar — encerra a sua sala
 *🖼️ Figurinha*
 Manda foto, GIF ou vídeo (até 15s) com a legenda *${P}figurinha* (ou *${P}f*) — ou responde a uma foto/vídeo com *${P}f*
 
+*🎡 Roleta*
+${P}sorteio pizza, sushi, açaí — vai eliminando uma por rodada até sobrar a vencedora (ou uma opção por linha)
+
 *🔗 Conta*
 ${P}vincular 123456 — liga seu Zap ao Discord (gere o código com /zap no Discord)
 ${P}desvincular — desfaz o vínculo`;

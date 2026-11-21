@@ -13,6 +13,7 @@ import { postarEventos } from './aovivo.js';
 import { verificarRetro } from './retro.js';
 import { verificarEpic } from './epic.js';
 import { tratarFigurinha, COMANDOS_FIGURINHA } from './figurinha.js';
+import { tratarRoleta, COMANDOS_ROLETA } from './roleta.js';
 import path from 'node:path';
 
 const logger = pino({ level: 'silent' });
@@ -123,6 +124,11 @@ async function conectar() {
                 // Figurinha precisa da mensagem inteira (foto/vídeo), não só do texto
                 if (COMANDOS_FIGURINHA.includes(cmd)) {
                     await tratarFigurinha(sock, msg, ids[0]);
+                    continue;
+                }
+                // Roleta roda em segundo plano (edita a mesma mensagem por vários segundos)
+                if (COMANDOS_ROLETA.includes(cmd)) {
+                    tratarRoleta(sock, msg, texto).catch(e => console.error('Roleta:', e.message));
                     continue;
                 }
                 const resposta = await tratar(texto, { ids, nome: msg.pushName }, chatId);
