@@ -39,7 +39,7 @@ async function conectar() {
     let pareamentoPedido = false;
     sock.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
         // Primeiro acesso: em vez de QR Code, gera um código de pareamento para digitar no celular.
-        if (!sock.authState.creds.registered && !pareamentoPedido && (connection === 'connecting' || qr)) {
+        if (!sock.authState.creds.registered && !pareamentoPedido && qr) {
             if (!config.numero) {
                 console.error('ZAP_NUMERO não configurado: não dá para parear.');
                 return;
@@ -65,7 +65,12 @@ async function conectar() {
             const codigo = lastDisconnect?.error?.output?.statusCode;
             estado = `desconectado (${codigo ?? '?'})`;
             if (codigo === DisconnectReason.loggedOut) {
-                console.error('Sessão encerrada no celular (logout). Apague a pasta de autenticação e pareie de novo.');
+                if (sock.authState.creds.registered) {
+                    console.error('Sessão encerrada no celular (logout). Limpando a sessão para parear de novo.');
+                }
+                // Sessão inválida ou pareamento não concluído: apaga e recomeça (gera código novo).
+                fs.rmSync(config.authDir, { recursive: true, force: true });
+                setTimeout(() => conectar().catch(e => console.error('Falha ao reconectar:', e.message)), 5_000);
                 return;
             }
             // Outra instância assumiu a sessão: espera mais antes de tentar, para não ficar disputando.
