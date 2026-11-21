@@ -27,6 +27,8 @@ const config = {
     // se definido, o bot só responde nesse grupo (descubra com !id)
     grupoId: process.env.ZAP_GROUP_ID || '',
     prefixo: process.env.ZAP_PREFIXO || '!',
+    // Não conecta antes disso (ex.: o WhatsApp restringiu o número e é melhor esperar passar)
+    pausaAte: new Date(process.env.ZAP_PAUSA_ATE || '2026-11-21T18:15:00-03:00'),
 
     authDir: process.env.ZAP_AUTH_DIR || `${BASE}/zap-data/auth`,
     zapDb: process.env.ZAP_DB || `${BASE}/zap-data/zap.sqlite`,

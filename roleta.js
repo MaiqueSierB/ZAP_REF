@@ -4,7 +4,7 @@ import { randomInt } from 'node:crypto';
 
 export const COMANDOS_ROLETA = ['sorteio', 'roleta', 'sortear'];
 const MAX_OPCOES = 30;
-const PAUSA_MS = 2_500;               // tempo entre uma eliminação e outra
+const PAUSA_MS = 4_000;               // tempo entre uma eliminação e outra
 const rodando = new Set();             // um sorteio por conversa de cada vez
 const espera = ms => new Promise(r => setTimeout(r, ms));
 

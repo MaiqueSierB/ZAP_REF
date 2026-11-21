@@ -90,6 +90,13 @@ async function conectar() {
         if (connection === 'close') {
             const codigo = lastDisconnect?.error?.output?.statusCode;
             estado = `desconectado (${codigo ?? '?'})`;
+            // Ainda sem parear: não fica pedindo código novo a cada minuto (o WhatsApp vê isso como robô)
+            if (!sock.authState.creds.registered) {
+                console.warn('Código de pareamento não foi usado. Gero outro em 10 minutos.');
+                fs.rmSync(config.authDir, { recursive: true, force: true });
+                setTimeout(() => conectar().catch(e => console.error('Falha ao reconectar:', e.message)), 10 * 60_000);
+                return;
+            }
             if (codigo === DisconnectReason.loggedOut) {
                 if (sock.authState.creds.registered) {
                     console.error('Sessão encerrada pelo WhatsApp (logout). Limpando a sessão para parear de novo.');
@@ -175,13 +182,25 @@ http.createServer(async (req, res) => {
         if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
         return res.end('Deu erro ao montar o Wrapped. Tenta de novo daqui a pouco.');
     }
-    const ok = estado === 'conectado';
+    // Pausa proposital conta como "no ar" para o monitor não alarmar
+    const ok = estado === 'conectado' || estado.startsWith('pausado');
     res.writeHead(ok ? 200 : 503, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok, estado }));
 }).listen(Number(process.env.PORT || 3000), () => console.log(`Health check na porta ${process.env.PORT || 3000}`));
 
-// Só conecta depois de garantir que nenhum outro processo está usando a sessão.
-pegarTrava(path.join(path.dirname(config.authDir), 'zap.lock')).then(() => conectar()).catch(e => {
+// Só conecta depois da pausa (se houver) e de garantir que nenhum outro processo está usando a sessão.
+async function iniciar() {
+    const falta = config.pausaAte - Date.now();
+    if (falta > 0) {
+        estado = `pausado até ${config.pausaAte.toLocaleString('pt-BR')}`;
+        console.log(`WhatsApp em pausa: conecto em ${Math.round(falta / 60_000)} min.`);
+        await new Promise(r => setTimeout(r, falta));
+    }
+    await pegarTrava(path.join(path.dirname(config.authDir), 'zap.lock'));
+    await conectar();
+}
+
+iniciar().catch(e => {
     estado = 'erro';
     console.error('Falha ao iniciar o WhatsApp:', e);
 });
