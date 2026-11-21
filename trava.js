@@ -7,10 +7,6 @@ import path from 'node:path';
 const VALIDADE = 30_000; // trava "velha" (sem batimento) depois de 30s
 let timer = null;
 
-function vivo(pid) {
-    try { process.kill(pid, 0); return true; } catch { return false; }
-}
-
 function ler(arquivo) {
     try { return JSON.parse(fs.readFileSync(arquivo, 'utf8')); } catch { return null; }
 }
@@ -19,7 +15,9 @@ export async function pegarTrava(arquivo) {
     fs.mkdirSync(path.dirname(arquivo), { recursive: true });
     for (;;) {
         const t = ler(arquivo);
-        const livre = !t || t.pid === process.pid || Date.now() - t.ts > VALIDADE || !vivo(t.pid);
+        // Só vale o batimento: na Hostinger os processos podem estar em "caixas" separadas,
+        // então checar o pid do outro processo não é confiável (parecia morto e a sessão era roubada).
+        const livre = !t || t.pid === process.pid || Date.now() - t.ts > VALIDADE;
         if (livre) {
             fs.writeFileSync(arquivo, JSON.stringify({ pid: process.pid, ts: Date.now() }));
             await new Promise(r => setTimeout(r, 500));
