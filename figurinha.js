@@ -34,6 +34,7 @@ function acharMidia(msg) {
 
 async function imagemParaWebp(buffer) {
     const { default: sharp } = await import('sharp');
+    sharp.concurrency(1);   // mesmo motivo do ffmpeg: poucas threads na hospedagem
     return sharp(buffer)
         .resize(512, 512, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
         .webp({ quality: 80 })
@@ -50,10 +51,11 @@ async function videoParaWebp(buffer) {
         await fs.writeFile(entrada, buffer);
         // Tenta com qualidade boa; se passar do limite, reduz qualidade e fps.
         for (const [fps, q] of [[15, 60], [12, 40], [10, 25]]) {
-            await exec(ffmpeg, ['-y', '-i', entrada, '-t', '6', '-an',
-                '-vf', `fps=${fps},scale=512:512:force_original_aspect_ratio=decrease,format=rgba,` +
-                    'pad=512:512:(ow-iw)/2:(oh-ih)/2:color=0x00000000',
-                '-c:v', 'libwebp', '-lossless', '0', '-q:v', String(q), '-loop', '0', '-preset', 'picture',
+            // 1 thread só: a hospedagem compartilhada limita processos/threads (senão dá "Resource temporarily unavailable")
+            await exec(ffmpeg, ['-y', '-threads', '1', '-i', entrada, '-t', '6', '-an', '-filter_threads', '1',
+                '-vf', `fps=${fps},scale=512:512:force_original_aspect_ratio=decrease,format=yuva420p,` +
+                    'pad=512:512:(ow-iw)/2:(oh-ih)/2:color=black@0',
+                '-c:v', 'libwebp', '-threads', '1', '-lossless', '0', '-q:v', String(q), '-loop', '0', '-preset', 'picture',
                 saida], { timeout: 60_000 });
             const out = await fs.readFile(saida);
             if (out.length <= LIMITE_BYTES) return out;
@@ -90,10 +92,12 @@ export async function tratarFigurinha(sock, msg, chave) {
         const webp = m.videoMessage ? await videoParaWebp(buffer) : await imagemParaWebp(buffer);
         await sock.sendMessage(msg.key.remoteJid, { sticker: webp }, { quoted: msg });
     } catch (e) {
-        console.error('Figurinha:', e.message);
+        console.error('Figurinha:', e.message);   // detalhe completo só no log, não no grupo
         await responder(/Cannot find (package|module)|ffmpeg indisponível/.test(e.message)
             ? '⚠️ A conversão de figurinha não está disponível no servidor agora.'
-            : `⚠️ Não consegui fazer essa figurinha (${e.message}).`);
+            : /pesado demais/.test(e.message)
+                ? '⚠️ Esse vídeo ficou pesado demais pra figurinha. Tenta um mais curto ou menor.'
+                : '⚠️ Não consegui fazer essa figurinha. Tenta outra mídia.');
     }
     return true;
 }
