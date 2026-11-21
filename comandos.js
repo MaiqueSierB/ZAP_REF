@@ -20,57 +20,58 @@ const ultimoApagar = new Map();  // chave remetente -> [palpites abertos]
 const EXPIRA = 30 * 60_000;
 
 const AJUDA =
-`*🤖 Bot do Regresso no Zap*
+`*🤖 Bot do Regresso — o que dá pra fazer*
+Todo comando começa com *${P}*. Onde está entre < >, troque pelo que você quer (sem os < >).
 
-*🎬 Filmes e séries (RMDB)*
-${P}filme duna — procura e mostra a nota do servidor
-${P}nota 1 8.5 — dá nota pro item 1 da última busca
-${P}top filmes — melhores do servidor
+*🎬 Filmes e séries*
+${P}filme <nome> — procura e mostra a nota do grupo
+${P}nota <número> <nota> — avalia um da lista que apareceu (ex.: ${P}nota 1 8)
+${P}top filmes — os mais bem avaliados do grupo
 
-*🎮 Jogos (RGDB)*
-${P}game elden ring — procura o jogo
-${P}nota 1 9 zerei — nota (+ joguei, zerei ou platinei)
-${P}top games — melhores do servidor
-${P}gratis — jogos grátis na Epic agora (o grupo também é avisado sozinho)
+*🎮 Jogos*
+${P}game <nome> — procura o jogo
+${P}nota <número> <nota> — avalia; se quiser, coloque no fim: joguei, zerei ou platinei
+${P}top games — os mais bem avaliados do grupo
+${P}gratis — jogos de graça na Epic agora
 
-*⚽ Bolão do Brasileirão*
-${P}bolao — próximos jogos abertos
-${P}palpite 1 2x1 2 0x0 — um ou vários jogos
-${P}palpite 2x1 0x0 1x1 — placares na ordem da lista
-${P}meuspalpites — seus últimos palpites (📱 = feito pelo Zap, 💻 = Discord)
-${P}apagar — lista seus palpites que dá pra apagar; ${P}apagar 1 apaga
-${P}ranking — ranking geral
+*⚽ Bolão*
+${P}bolao — mostra os próximos jogos, numerados
+${P}palpite <número do jogo> <placar> — ex.: ${P}palpite 1 2x0 (dá pra mandar vários de uma vez)
+${P}meuspalpites — seus palpites
+${P}apagar — pra apagar um palpite
+${P}ranking — quem está ganhando
 
-*🏆 Brasileirão*
-${P}tabela — classificação
-${P}rodada — jogos e placares da rodada (ou ${P}rodada 35)
-${P}meutime flamengo — avisa gol e fim de jogo do seu time (${P}meutime nenhum para parar)
+*🏟️ Futebol*
+${P}tabela — classificação do Brasileirão
+${P}rodada — jogos e placares da rodada
+${P}meutime <seu time> — o bot te marca quando seu time fizer gol (${P}meutime nenhum pra parar)
 
-*📺 Anti Janja (transmissão de tela)*
-${P}transmitir — cria uma sala e manda o link aqui
-${P}parar — encerra a sua sala
+*📺 Transmitir a tela*
+${P}transmitir — cria uma sala e manda o link pra galera assistir
+${P}parar — fecha a sala
 
-*🖼️ Figurinha*
-Foto, GIF ou vídeo (até 15s) com a legenda *${P}f* — ou responde a uma mídia com *${P}f*
-*${P}f seu texto* — figurinha com legenda estilo meme
-Responde a uma mensagem com *${P}print* — vira figurinha com o nome de quem falou
+*🖼️ Figurinhas*
+Manda foto ou vídeo com a legenda *${P}f* (ou responde a uma foto com ${P}f)
+${P}f <texto> — figurinha com frase
+Responde uma mensagem com *${P}print* — vira figurinha da mensagem
 
 *⏰ Lembretes*
-${P}lembrar sexta 20h racha — também: 20h, amanhã 9h, 25/12 10h, 30min, em 2h
-${P}lembretes — os seus marcados · ${P}cancelar 12 — cancela
+${P}lembrar <quando> <o quê> — ex.: ${P}lembrar amanhã 20h <compromisso>
+Quando pode ser: 20h, amanhã 9h, sexta 20h, 25/12 10h, 30min, em 2h
+${P}lembretes — ver os seus · ${P}cancelar <número> — cancelar
 
 *🗳️ Enquete*
-${P}enquete Pizza hoje? | Sim | Não — enquete do WhatsApp (${P}enquete+ deixa votar em várias)
+${P}enquete <pergunta> | <opção 1> | <opção 2> — ${P}enquete+ deixa marcar mais de uma
 
-*🎡 Roleta*
-${P}sorteio pizza, sushi, açaí — vai eliminando uma por rodada até sobrar a vencedora (ou uma opção por linha)
+*🎡 Sorteio*
+${P}sorteio <opção 1>, <opção 2>, <opção 3> — elimina uma por vez até sobrar a vencedora
 
-*🎁 Wrapped (retrospectiva do ano)*
-${P}wrapped — a do grupo · ${P}wrapped eu — a sua (com link da página completa)
+*🎁 Retrospectiva do ano*
+${P}wrapped — a do grupo · ${P}wrapped eu — a sua
 
-*🔗 Conta*
-${P}vincular 123456 — liga seu Zap ao Discord (gere o código com /zap no Discord)
-${P}desvincular — desfaz o vínculo`;
+*🔗 Ligar ao Discord* (precisa pra notas e bolão)
+No Discord, use /zap e mande aqui: ${P}vincular <código>
+${P}desvincular — desfaz`;
 
 const precisaVinculo = `🔗 Primeiro vincule seu Zap ao Discord: use */zap* no Discord e mande aqui *${P}vincular CÓDIGO*.`;
 
@@ -265,14 +266,14 @@ export async function tratar(texto, remetente, chatId) {
             if (!quem) return precisaVinculo;
             if (!arg) {
                 const atual = b.bolaoMeuTime(quem.discord_id);
-                return atual ? `Seu time: *${atual.time_nome}*. Pra trocar: ${P}meutime nome do time` : `Use: ${P}meutime flamengo`;
+                return atual ? `Seu time: *${atual.time_nome}*. Pra trocar: ${P}meutime nome do time` : `Use: ${P}meutime <nome do seu time>`;
             }
             if (/^(nenhum|nada|parar|sair)$/i.test(arg)) {
                 b.bolaoRemoverTime(quem.discord_id);
                 return '🔕 Pronto, sem avisos de gol pra você.';
             }
             const time = identificarTime(arg);
-            if (!time) return 'Não reconheci esse time. Tenta o nome do clube (ex.: flamengo, atletico mineiro, sao paulo).';
+            if (!time) return 'Não reconheci esse time. Escreva só o nome do clube, sem abreviar.';
             b.bolaoDefinirTime(quem.discord_id, time);
             return `✅ Time do coração: *${time.nome}*. Vou te marcar aqui quando sair gol ou acabar jogo dele (e o bot do Discord te avisa no privado).`;
         }

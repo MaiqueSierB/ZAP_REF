@@ -33,7 +33,7 @@ export async function tratarRoleta(sock, msg, texto) {
 
     if (opcoes.length < 2) {
         return responder('🎡 *Roleta de eliminação*\nMande as opções separadas por vírgula (ou uma por linha):\n' +
-            '*!sorteio pizza, hambúrguer, sushi, açaí*\n\nO bot vai eliminando uma por rodada até sobrar a vencedora.');
+            '*!sorteio opção 1, opção 2, opção 3*\n\nO bot vai eliminando uma por rodada até sobrar a vencedora.');
     }
     if (opcoes.length > MAX_OPCOES) return responder(`Muita opção! O máximo é ${MAX_OPCOES}.`);
     if (rodando.has(chat)) return responder('⏳ Já tem uma roleta rodando aqui. Espera ela terminar.');

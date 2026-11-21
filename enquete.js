@@ -17,7 +17,7 @@ export async function tratarEnquete(sock, msg, texto) {
     if (!pergunta || opcoes.length < 2 || opcoes.length > 12) {
         return sock.sendMessage(msg.key.remoteJid, {
             text: '🗳️ *Enquete*: pergunta e de 2 a 12 opções separadas por | (ou uma por linha)\n' +
-                '*!enquete Pizza hoje? | Sim | Não | Só se for de calabresa*\n' +
+                '*!enquete Pergunta? | Opção 1 | Opção 2*\n' +
                 'Use *!enquete+* pra deixar votar em mais de uma opção.'
         }, { quoted: msg });
     }

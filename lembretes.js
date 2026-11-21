@@ -60,8 +60,8 @@ const fmt = d => d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', m
 export function lembrar(arg, autor, chat) {
     const r = interpretar(arg);
     if (!r) {
-        return '⏰ *Lembrete* — exemplos:\n!lembrar 20h racha\n!lembrar sexta 20h30 racha\n!lembrar amanhã 9h academia\n' +
-            '!lembrar 25/12 10h ceia\n!lembrar 30min tirar a pizza\n!lembrar em 2h ligar pro fulano';
+        return '⏰ *Lembrete* — escreva: !lembrar <quando> <o quê>\n\n' +
+            'Quando pode ser:\n• 20h (hoje)\n• amanhã 9h\n• sexta 20h30\n• 25/12 10h\n• 30min\n• em 2h';
     }
     if (r.quando.getTime() - Date.now() > MAX_DIAS * 86_400_000) return `Só consigo lembrar até ${MAX_DIAS} dias pra frente.`;
     if (b.lembretesPendentes(autor).length >= MAX_PENDENTES) return `Você já tem ${MAX_PENDENTES} lembretes. Cancele algum com *!cancelar*.`;
