@@ -65,6 +65,9 @@ ${P}enquete Pizza hoje? | Sim | Não — enquete do WhatsApp (${P}enquete+ deixa
 *🎡 Roleta*
 ${P}sorteio pizza, sushi, açaí — vai eliminando uma por rodada até sobrar a vencedora (ou uma opção por linha)
 
+*🎁 Wrapped (retrospectiva do ano)*
+${P}wrapped — a do grupo · ${P}wrapped eu — a sua (com link da página completa)
+
 *🔗 Conta*
 ${P}vincular 123456 — liga seu Zap ao Discord (gere o código com /zap no Discord)
 ${P}desvincular — desfaz o vínculo`;

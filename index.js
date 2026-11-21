@@ -6,7 +6,7 @@ import makeWASocket, {
 } from 'baileys';
 import config from './config.js';
 import { tratar } from './comandos.js';
-import { quemE } from './bancos.js';
+import { quemE, registrarUso } from './bancos.js';
 import { verificarAniversarios } from './aniversarios.js';
 import { pegarTrava } from './trava.js';
 import { postarEventos } from './aovivo.js';
@@ -17,6 +17,7 @@ import { tratarEnquete, COMANDOS_ENQUETE } from './enquete.js';
 import { enviarLembretes } from './lembretes.js';
 import { tratarRoleta, COMANDOS_ROLETA } from './roleta.js';
 import path from 'node:path';
+import { rotaWrapped, tratarWrapped, verificarWrapped, COMANDOS_WRAPPED } from './wrapped.js';
 
 const logger = pino({ level: 'silent' });
 let estado = 'iniciando';
@@ -75,6 +76,7 @@ async function conectar() {
                 verificarAniversarios(sock).catch(e => console.error('Aniversários:', e.message));
                 verificarRetro(sock).catch(e => console.error('Retrospectiva:', e.message));
                 verificarEpic(sock).catch(e => console.error('Jogos grátis:', e.message));
+                verificarWrapped(sock).catch(e => console.error('Wrapped:', e.message));
             };
             setTimeout(checar, 10_000);
             if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
@@ -127,6 +129,14 @@ async function conectar() {
                 // No privado, só atende quem já vinculou a conta (menos risco de ban); desconhecidos só podem !vincular.
                 if (!grupo && !quemE(ids) && cmd !== 'vincular') continue;
 
+                // Contagem de uso (alimenta o Wrapped); nunca atrapalha o comando
+                try { registrarUso(ids, cmd); } catch (e) { console.error('Uso:', e.message); }
+
+                if (COMANDOS_WRAPPED.includes(cmd)) {
+                    await tratarWrapped(sock, msg, ids, texto);
+                    continue;
+                }
+
                 // Figurinha precisa da mensagem inteira (foto/vídeo), não só do texto
                 if (COMANDOS_FIGURINHA.includes(cmd)) {
                     await tratarFigurinha(sock, msg, ids[0], texto);
@@ -156,8 +166,15 @@ async function conectar() {
     });
 }
 
-// Servidor HTTP mínimo: a hospedagem precisa de uma porta respondendo.
-http.createServer((req, res) => {
+// Servidor HTTP: páginas do Wrapped e, no resto, o health check (a hospedagem precisa de uma porta respondendo).
+http.createServer(async (req, res) => {
+    try {
+        if (await rotaWrapped(req, res)) return;
+    } catch (e) {
+        console.error('Página do Wrapped:', e.message);
+        if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('Deu erro ao montar o Wrapped. Tenta de novo daqui a pouco.');
+    }
     const ok = estado === 'conectado';
     res.writeHead(ok ? 200 : 503, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok, estado }));

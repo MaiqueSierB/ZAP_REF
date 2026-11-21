@@ -53,6 +53,14 @@ db('zap').exec(`
         chave TEXT PRIMARY KEY,
         valor TEXT
     );
+    -- Uso dos comandos por pessoa e ano (alimenta o Wrapped). quem = id do Discord se vinculado, senão o id do Zap
+    CREATE TABLE IF NOT EXISTS uso (
+        ano   INTEGER NOT NULL,
+        quem  TEXT NOT NULL,
+        cmd   TEXT NOT NULL,
+        n     INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (ano, quem, cmd)
+    );
     CREATE TABLE IF NOT EXISTS codigos (
         codigo      TEXT PRIMARY KEY,   -- gerado pelo /zap no Discord
         discord_id  TEXT NOT NULL,
@@ -60,6 +68,18 @@ db('zap').exec(`
         expira      INTEGER NOT NULL    -- epoch ms
     );
 `);
+
+// Acesso direto aos bancos (usado pelo Wrapped, que faz consultas próprias)
+export const banco = db;
+
+export function registrarUso(zapIds, cmd) {
+    const quem = quemE(zapIds)?.discord_id ?? zapIds.find(Boolean);
+    if (!quem) return;
+    db('zap').prepare(`
+        INSERT INTO uso (ano, quem, cmd, n) VALUES (?, ?, ?, 1)
+        ON CONFLICT(ano, quem, cmd) DO UPDATE SET n = n + 1
+    `).run(new Date().getFullYear(), quem, cmd);
+}
 
 export function quemE(zapIds) {
     for (const id of zapIds.filter(Boolean)) {
