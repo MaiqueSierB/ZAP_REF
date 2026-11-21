@@ -7,7 +7,7 @@ Conecta um número de WhatsApp (via [Baileys](https://baileys.wiki), não oficia
 - **Bolão** — `!bolao`, `!palpite 1 2x1`, `!meuspalpites`, `!ranking`
 - **Vínculo** — `/zap` no Discord gera um código; `!vincular CÓDIGO` no grupo liga o número ao perfil do Discord
 
-`!ajuda` lista tudo. Comandos desconhecidos são ignorados para não poluir o grupo.
+`!ajuda` lista tudo. Funciona no grupo e no privado (no privado, só para quem já vinculou; desconhecidos só podem usar `!vincular`). Comandos desconhecidos são ignorados.
 
 ## Configuração (variáveis de ambiente)
 

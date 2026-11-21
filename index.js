@@ -6,6 +6,7 @@ import makeWASocket, {
 } from 'baileys';
 import config from './config.js';
 import { tratar } from './comandos.js';
+import { quemE } from './bancos.js';
 
 const logger = pino({ level: 'silent' });
 let estado = 'iniciando';
@@ -85,15 +86,21 @@ async function conectar() {
         for (const msg of messages) {
             try {
                 if (msg.key.fromMe) continue;
-                const chatId = msg.key.remoteJid;
-                if (!chatId?.endsWith('@g.us')) continue;            // só grupos
+                const chatId = msg.key.remoteJid || '';
+                if (chatId === 'status@broadcast' || chatId.endsWith('@newsletter') || chatId.endsWith('@broadcast')) continue;
+                const grupo = chatId.endsWith('@g.us');
                 const texto = textoDa(msg);
                 if (!texto.startsWith(config.prefixo)) continue;
-                const ehId = texto.trim().toLowerCase() === `${config.prefixo}id`;
-                if (config.grupoId && chatId !== config.grupoId && !ehId) continue;
+                const cmd = texto.trim().slice(config.prefixo.length).split(/\s+/)[0].toLowerCase();
+                if (grupo && config.grupoId && chatId !== config.grupoId && cmd !== 'id') continue;
 
-                // Em grupos o remetente pode vir como número (@s.whatsapp.net) ou id oculto (@lid).
-                const ids = [...new Set([msg.key.participantAlt, msg.key.participant].filter(Boolean))];
+                // O remetente pode vir como número (@s.whatsapp.net) ou id oculto (@lid).
+                const ids = [...new Set((grupo
+                    ? [msg.key.participantAlt, msg.key.participant]
+                    : [msg.key.remoteJidAlt, msg.key.senderPn, chatId]).filter(Boolean))];
+
+                // No privado, só atende quem já vinculou a conta (menos risco de ban); desconhecidos só podem !vincular.
+                if (!grupo && !quemE(ids) && cmd !== 'vincular') continue;
                 const resposta = await tratar(texto, { ids, nome: msg.pushName }, chatId);
                 if (resposta) await sock.sendMessage(chatId, { text: resposta }, { quoted: msg });
             } catch (e) {
