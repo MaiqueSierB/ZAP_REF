@@ -24,6 +24,31 @@ let estado = 'iniciando';
 let sock = null;
 let tentativas = 0;
 
+// ---------- Jeito de gente (menos cara de robô para o WhatsApp) ----------
+const espera = ms => new Promise(r => setTimeout(r, ms));
+
+// "digitando..." por 1 a 3 segundos antes de responder
+async function digitando(chatId) {
+    try { await sock.sendPresenceUpdate('composing', chatId); } catch { /* só estética */ }
+    await espera(1_000 + Math.floor(Math.random() * 2_000));
+}
+
+// Ignora o mesmo comando repetido em 15 s e mais de 6 comandos por minuto da mesma pessoa
+const ultimosComandos = new Map();   // pessoa -> [{ texto, quando }]
+function floodou(pessoa, texto) {
+    const agora = Date.now();
+    const t = texto.trim().toLowerCase();
+    const recentes = (ultimosComandos.get(pessoa) ?? []).filter(c => agora - c.quando < 60_000);
+    const repetido = recentes.some(c => c.texto === t && agora - c.quando < 15_000);
+    const cabe = !repetido && recentes.length < 6;
+    if (cabe) recentes.push({ texto: t, quando: agora });
+    ultimosComandos.set(pessoa, recentes);
+    if (ultimosComandos.size > 500) {   // limpa quem sumiu
+        for (const [k, v] of ultimosComandos) if (!v.some(c => agora - c.quando < 60_000)) ultimosComandos.delete(k);
+    }
+    return !cabe;
+}
+
 // Texto da mensagem, inclusive quando vem embrulhada (mensagens temporárias, etc.)
 function textoDa(msg) {
     let m = msg.message;
@@ -107,9 +132,9 @@ async function conectar() {
                 return;
             }
             // Outra instância assumiu a sessão: espera mais antes de tentar, para não ficar disputando.
-            const espera = codigo === DisconnectReason.connectionReplaced ? 60_000 : Math.min(30_000, 2_000 * 2 ** tentativas++);
-            console.warn(`Conexão caiu (código ${codigo}). Reconectando em ${Math.round(espera / 1000)}s...`);
-            setTimeout(() => conectar().catch(e => console.error('Falha ao reconectar:', e.message)), espera);
+            const aguardar = codigo === DisconnectReason.connectionReplaced ? 60_000 : Math.min(30_000, 2_000 * 2 ** tentativas++);
+            console.warn(`Conexão caiu (código ${codigo}). Reconectando em ${Math.round(aguardar / 1000)}s...`);
+            setTimeout(() => conectar().catch(e => console.error('Falha ao reconectar:', e.message)), aguardar);
         }
     });
 
@@ -135,6 +160,9 @@ async function conectar() {
 
                 // No privado, só atende quem já vinculou a conta (menos risco de ban); desconhecidos só podem !vincular.
                 if (!grupo && !quemE(ids) && cmd !== 'vincular') continue;
+
+                if (floodou(ids[0] ?? chatId, texto)) continue;
+                await digitando(chatId);
 
                 // Contagem de uso (alimenta o Wrapped); nunca atrapalha o comando
                 try { registrarUso(ids, cmd); } catch (e) { console.error('Uso:', e.message); }
