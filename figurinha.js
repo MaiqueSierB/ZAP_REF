@@ -74,7 +74,7 @@ function quebrar(texto, largura, maxLinhas) {
 }
 
 // Roda o ffmpeg num diretório temporário; `montar` recebe a função de execução e o gerador de caminhos.
-async function comFfmpeg(montar, arquivos = {}) {
+export async function comFfmpeg(montar, arquivos = {}) {
     const ffmpeg = await caminhoFfmpeg();
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'fig-'));
     const p = nome => path.join(dir, nome);
