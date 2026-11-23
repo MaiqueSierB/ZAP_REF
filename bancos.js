@@ -389,3 +389,11 @@ export function marcarLembrete(id) {
     db('zap').prepare('UPDATE lembretes SET enviado = 1 WHERE id = ?').run(id);
     db('zap').prepare("DELETE FROM lembretes WHERE enviado = 1 AND quando < ?").run(Date.now() - 7 * 86_400_000);
 }
+
+// Quem escolheu time do coração (!torcidas), com o nome do vínculo quando houver
+export function torcidas() {
+    const nomes = new Map(db('zap').prepare('SELECT discord_id, nome FROM vinculos').all().map(r => [r.discord_id, r.nome]));
+    return (db('bolao')?.prepare('SELECT discord_id, time_nome FROM times_favoritos ORDER BY time_nome').all() ?? [])
+        .map(r => ({ ...r, nome: nomes.get(r.discord_id) ?? null }));
+}
+
