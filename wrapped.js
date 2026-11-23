@@ -394,7 +394,7 @@ export const cartaoGrupo = d => png(svgGrupo(d));
 // Um bloco só, no último slide. Só aparece com o ID do bloco de anúncio configurado (não é segredo):
 // AdSense → Anúncios → Por bloco de anúncios → Display → copiar o data-ad-slot.
 const ADSENSE_CLIENTE = 'ca-pub-3476040476227672';
-const ADSENSE_BLOCO = process.env.WRAPPED_AD_SLOT || '';
+const ADSENSE_BLOCO = process.env.WRAPPED_AD_SLOT || '7564930340';   // bloco "Money"
 const scriptAnuncio = () => (ADSENSE_BLOCO
     ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENTE}" crossorigin="anonymous"></script>` : '');
 const blocoAnuncio = () => (ADSENSE_BLOCO ? `<div class="anuncio"><small>Publicidade · ajuda a manter os bots no ar</small>
@@ -441,7 +441,7 @@ p{font-size:19px;line-height:1.45;opacity:.92;margin:10px 0}
 a{color:#fff}.pessoas a{display:inline-block;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:999px;margin:4px;text-decoration:none}
 .dica{position:absolute;bottom:18px;left:0;right:0;text-align:center;opacity:.6;font-size:14px;animation:pula 1.6s infinite}
 @keyframes pula{50%{transform:translateY(6px)}}
-.anuncio{margin-top:28px;background:rgba(0,0,0,.25);border-radius:14px;padding:10px;min-height:120px}.anuncio small{display:block;opacity:.6;font-size:12px;margin-bottom:6px}
+.anuncio{overflow:hidden;max-width:100%;margin-top:28px;background:rgba(0,0,0,.25);border-radius:14px;padding:10px;min-height:120px}.anuncio small{display:block;opacity:.6;font-size:12px;margin-bottom:6px}
 .tag{display:inline-block;background:#ffe27a;color:#222;font-weight:800;border-radius:999px;padding:4px 12px;font-size:14px}
 </style></head><body><main>${slides.join('\n')}${rodape}</main>
 <script>
