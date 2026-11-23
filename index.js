@@ -17,6 +17,7 @@ import { tratarEnquete, COMANDOS_ENQUETE } from './enquete.js';
 import { enviarLembretes } from './lembretes.js';
 import { tratarRoleta, COMANDOS_ROLETA } from './roleta.js';
 import path from 'node:path';
+import { iniciarTelegram } from './telegram.js';
 import { rotaWrapped, tratarWrapped, verificarWrapped, COMANDOS_WRAPPED } from './wrapped.js';
 
 const logger = pino({ level: 'silent' });
@@ -236,6 +237,8 @@ async function iniciar() {
         await new Promise(r => setTimeout(r, falta));
     }
     await pegarTrava(path.join(path.dirname(config.authDir), 'zap.lock'));
+    // Telegram roda no mesmo processo que tem a trava (o Telegram só aceita um leitor por bot)
+    iniciarTelegram().catch(e => console.error('Telegram parou:', e.message));
     await conectar();
 }
 
