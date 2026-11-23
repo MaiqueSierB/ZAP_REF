@@ -49,6 +49,7 @@ ${P}ranking — quem está ganhando
 ${P}tabela — classificação do Brasileirão
 ${P}rodada — jogos e placares da rodada
 ${P}meutime <seu time> — o bot te marca quando seu time fizer gol (${P}meutime nenhum pra parar)
+${P}torcidas — quem já escolheu time
 
 *📺 Transmitir a tela*
 ${P}transmitir — cria uma sala e manda o link pra galera assistir
@@ -286,6 +287,16 @@ export async function tratar(texto, remetente, chatId) {
             return `✅ Time do coração: *${time.nome}*. Vou te marcar aqui quando sair gol ou acabar jogo dele (e o bot do Discord te avisa no privado).`;
         }
 
+        case 'torcidas': case 'torcida': {
+            const lista = b.torcidas();
+            if (!lista.length) return `Ninguém escolheu time ainda. Use *${P}meutime <seu time>* pra receber aviso de gol.`;
+            const porTime = new Map();
+            for (const r of lista) porTime.set(r.time_nome, [...(porTime.get(r.time_nome) ?? []), r.nome ?? 'alguém (só no Discord)']);
+            return `⚽ *Torcidas do Regresso* (${lista.length})\n` +
+                [...porTime].sort((x, y) => y[1].length - x[1].length || x[0].localeCompare(y[0]))
+                    .map(([time, gente]) => `*${time}*: ${gente.join(', ')}`).join('\n') +
+                `\n\nSó jogos desses times geram aviso de gol. Escolha o seu: *${P}meutime <time>*`;
+        }
         case 'assistir': case 'querover':
             if (!quem) return precisaVinculo;
             return extras.assistir(quem.discord_id, arg);

@@ -390,6 +390,17 @@ async function png(svg) {
 export const cartaoPessoa = (d, p) => png(svgPessoa(d, p));
 export const cartaoGrupo = d => png(svgGrupo(d));
 
+// ---------- Anúncio (AdSense) ----------
+// Um bloco só, no último slide. Só aparece com o ID do bloco de anúncio configurado (não é segredo):
+// AdSense → Anúncios → Por bloco de anúncios → Display → copiar o data-ad-slot.
+const ADSENSE_CLIENTE = 'ca-pub-3476040476227672';
+const ADSENSE_BLOCO = process.env.WRAPPED_AD_SLOT || '7564930340';   // bloco "Money"
+const scriptAnuncio = () => (ADSENSE_BLOCO
+    ? `<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENTE}" crossorigin="anonymous"></script>` : '');
+const blocoAnuncio = () => (ADSENSE_BLOCO ? `<div class="anuncio"><small>Publicidade · ajuda a manter os bots no ar</small>
+<ins class="adsbygoogle" style="display:block" data-ad-client="${ADSENSE_CLIENTE}" data-ad-slot="${esc(ADSENSE_BLOCO)}" data-ad-format="auto" data-full-width-responsive="true"></ins>
+<script>(adsbygoogle = window.adsbygoogle || []).push({});</script></div>` : '');
+
 // ---------- Página web ----------
 const CORES = [['#6a11cb', '#2575fc'], ['#e8456b', '#f7a13b'], ['#0f9b8e', '#1d4350'], ['#232526', '#5b2c83'],
     ['#ff512f', '#dd2476'], ['#1e3c72', '#2a5298'], ['#134e5e', '#71b280'], ['#41295a', '#2f0743']];
@@ -405,7 +416,7 @@ const nomeItem = item => `<b>${esc(item.title)}</b>`;
 
 function pagina(titulo, slides, rodape = '') {
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">${scriptAnuncio()}
 <title>${esc(titulo)}</title>
 <meta property="og:title" content="${esc(titulo)}"><meta property="og:description" content="A retrospectiva do ano no Regresso">
 <style>
@@ -430,6 +441,7 @@ p{font-size:19px;line-height:1.45;opacity:.92;margin:10px 0}
 a{color:#fff}.pessoas a{display:inline-block;background:rgba(255,255,255,.15);padding:8px 14px;border-radius:999px;margin:4px;text-decoration:none}
 .dica{position:absolute;bottom:18px;left:0;right:0;text-align:center;opacity:.6;font-size:14px;animation:pula 1.6s infinite}
 @keyframes pula{50%{transform:translateY(6px)}}
+.anuncio{overflow:hidden;max-width:100%;margin-top:28px;background:rgba(0,0,0,.25);border-radius:14px;padding:10px;min-height:120px}.anuncio small{display:block;opacity:.6;font-size:12px;margin-bottom:6px}
 .tag{display:inline-block;background:#ffe27a;color:#222;font-weight:800;border-radius:999px;padding:4px 12px;font-size:14px}
 </style></head><body><main>${slides.join('\n')}${rodape}</main>
 <script>
@@ -501,7 +513,7 @@ ${p.time ? `<p style="margin-top:18px">Coração: <b>${esc(p.time)}</b></p>` : '
 ${p.premios.length > 1 ? `<p style="margin-top:20px">E ainda levou: ${p.premios.slice(1).map(x => `${x.emoji} <b>${esc(x.titulo)}</b>`).join(' · ')}</p>` : ''}`));
 
     s.push(slide(i++, `<div class="k">É isso</div><h2>Valeu por fazer parte do Regresso em ${d.ano}.</h2>
-<p><a href="${URL_BASE}/wrapped">Ver a retrospectiva do grupo →</a></p>`));
+<p><a href="${URL_BASE}/wrapped">Ver a retrospectiva do grupo →</a></p>${blocoAnuncio()}`));
     return pagina(`Regresso Wrapped ${d.ano} — ${p.nome}`, s);
 }
 
@@ -545,7 +557,7 @@ export function paginaGrupo(d) {
 
     s.push(slide(i++, `<div class="k">E você?</div><h2>Veja a sua retrospectiva</h2><div class="pessoas">${d.pessoas.map(p =>
         `<a href="${URL_BASE}/wrapped/${encodeURIComponent(p.id)}">${p.persona.emoji} ${esc(p.nome)}</a>`).join('')}</div>
-<p style="margin-top:18px;font-size:15px;opacity:.7">Notas de filmes e jogos contam desde o começo dos bots; bolão e comandos do Zap contam o ano de ${d.ano}.</p>`));
+<p style="margin-top:18px;font-size:15px;opacity:.7">Notas de filmes e jogos contam desde o começo dos bots; bolão e comandos do Zap contam o ano de ${d.ano}.</p>${blocoAnuncio()}`));
     return pagina(`Regresso Wrapped ${d.ano}`, s.filter(Boolean));
 }
 
@@ -555,7 +567,8 @@ export async function rotaWrapped(req, res) {
     const partes = url.pathname.split('/').filter(Boolean);   // ['wrapped', id?]
     if (partes[0] === 'robots.txt') {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('User-agent: *\nDisallow: /\n');
+        // Só o robô do AdSense pode ler (para escolher anúncios); buscadores continuam bloqueados (as páginas têm dados da galera)
+        res.end('User-agent: Mediapartners-Google\nAllow: /\n\nUser-agent: *\nDisallow: /\n');
         return true;
     }
     if (partes[0] !== 'wrapped') return false;
