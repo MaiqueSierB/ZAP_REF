@@ -58,6 +58,8 @@ function textoDa(msg) {
     return m?.conversation || m?.extendedTextMessage?.text || m?.imageMessage?.caption || m?.videoMessage?.caption || '';
 }
 
+let codigosNaoUsados = 0;
+
 async function conectar() {
     fs.mkdirSync(config.authDir, { recursive: true });
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
@@ -93,6 +95,7 @@ async function conectar() {
         }
 
         if (connection === 'open') {
+            codigosNaoUsados = 0;
             estado = 'conectado';
             tentativas = 0;
             console.log(`✅ WhatsApp conectado como ${sock.user?.id}`);
@@ -117,11 +120,19 @@ async function conectar() {
             estado = `desconectado (${codigo ?? '?'})`;
             // Ainda sem parear: não fica pedindo código novo a cada minuto (o WhatsApp vê isso como robô)
             if (!sock.authState.creds.registered) {
-                console.warn('Código de pareamento não foi usado. Gero outro em 10 minutos.');
                 fs.rmSync(config.authDir, { recursive: true, force: true });
+                codigosNaoUsados++;
+                // Depois de 3 códigos sem uso, para de pedir: só volta quando o app for reiniciado (hPanel → Reiniciar)
+                if (codigosNaoUsados >= 3) {
+                    estado = 'pausado: aguardando pareamento (reinicie o app para gerar código)';
+                    console.warn('3 códigos de pareamento sem uso. Parei de pedir; reinicie o app quando for parear.');
+                    return;
+                }
+                console.warn('Código de pareamento não foi usado. Gero outro em 10 minutos.');
                 setTimeout(() => conectar().catch(e => console.error('Falha ao reconectar:', e.message)), 10 * 60_000);
                 return;
             }
+            codigosNaoUsados = 0;
             if (codigo === DisconnectReason.loggedOut) {
                 if (sock.authState.creds.registered) {
                     console.error('Sessão encerrada pelo WhatsApp (logout). Limpando a sessão para parear de novo.');
