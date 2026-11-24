@@ -32,10 +32,27 @@ db.exec(`
 `);
 
 export const hoje = (d = new Date()) => d.toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
-const mesDe = dia => dia.slice(0, 7);
-const ontem = dia => { const d = new Date(`${dia}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 1); return d.toISOString().slice(0, 10); };
-const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-export const nomeMes = mes => `${MESES[Number(mes.slice(5, 7)) - 1]} de ${mes.slice(0, 4)}`;
+const somar = (dia, n) => { const d = new Date(`${dia}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const ontem = dia => somar(dia, -1);
+export const MAX_SEMANA = 5;
+
+// Ciclo do desafio: do dia 26 até o dia 25 do mês seguinte (o primeiro foi 26/10/2026 a 25/11/2026)
+export function cicloDe(dia = hoje()) {
+    const [a, m, d] = dia.split('-').map(Number);
+    const ini = d >= 26 ? new Date(Date.UTC(a, m - 1, 26)) : new Date(Date.UTC(a, m - 2, 26));
+    const fim = new Date(Date.UTC(ini.getUTCFullYear(), ini.getUTCMonth() + 1, 25));
+    return { inicio: ini.toISOString().slice(0, 10), fim: fim.toISOString().slice(0, 10) };
+}
+const dm = dia => dia.split('-').reverse().slice(0, 2).join('/');
+export const nomeCiclo = c => `${dm(c.inicio)} a ${dm(c.fim)}`;
+export const nomeMes = mes => nomeCiclo(cicloDe(mes.length === 7 ? `${mes}-26` : mes));   // compatibilidade
+
+// Semana de segunda a domingo
+export function semanaDe(dia = hoje()) {
+    const dow = new Date(`${dia}T12:00:00Z`).getUTCDay();   // 0 = domingo
+    const seg = somar(dia, -((dow + 6) % 7));
+    return { inicio: seg, fim: somar(seg, 6) };
+}
 
 async function salvarFoto(buffer) {
     const { default: sharp } = await import('sharp');
@@ -55,9 +72,9 @@ export function sequencia(userId, dia = hoje()) {
     return n;
 }
 
-export function rankingMes(mes = mesDe(hoje())) {
+export function rankingMes(ciclo = cicloDe()) {
     return db.prepare(`SELECT user_id, MAX(nome) AS nome, COUNT(*) AS pontos, MAX(dia) AS ultimo
-        FROM checkins WHERE substr(dia, 1, 7) = ? GROUP BY user_id ORDER BY pontos DESC, ultimo ASC`).all(mes)
+        FROM checkins WHERE dia BETWEEN ? AND ? GROUP BY user_id ORDER BY pontos DESC, ultimo ASC`).all(ciclo.inicio, ciclo.fim)
         .map((r, i) => ({ ...r, posicao: i + 1, sequencia: sequencia(r.user_id) }));
 }
 
@@ -67,12 +84,17 @@ export async function registrar({ userId, nome, foto, legenda, origem }) {
     if (db.prepare('SELECT 1 FROM checkins WHERE user_id = ? AND dia = ?').get(userId, dia)) {
         return { ok: false, motivo: 'Você já marcou o treino de hoje. Amanhã tem mais! 💪' };
     }
+    const sem = semanaDe(dia);
+    const naSemana = db.prepare('SELECT COUNT(*) AS n FROM checkins WHERE user_id = ? AND dia BETWEEN ? AND ?').get(userId, sem.inicio, sem.fim).n;
+    if (naSemana >= MAX_SEMANA) {
+        return { ok: false, motivo: `Você já fez ${MAX_SEMANA} check-ins essa semana (máximo da semana). Descansa que segunda zera! 😴` };
+    }
     const arquivo = foto ? await salvarFoto(foto) : null;
     const id = db.prepare('INSERT INTO checkins (user_id, nome, dia, foto, legenda, origem) VALUES (?, ?, ?, ?, ?, ?)')
         .run(userId, nome, dia, arquivo, (legenda || '').slice(0, 200) || null, origem).lastInsertRowid;
     const ranking = rankingMes();
     const eu = ranking.find(r => r.user_id === userId);
-    return { ok: true, id, arquivo, pontos: eu.pontos, posicao: eu.posicao, total: ranking.length, sequencia: eu.sequencia };
+    return { ok: true, id, arquivo, pontos: eu.pontos, posicao: eu.posicao, total: ranking.length, sequencia: eu.sequencia, semana: naSemana + 1 };
 }
 
 export function apagarHoje(userId) {
@@ -83,16 +105,16 @@ export function apagarHoje(userId) {
     return true;
 }
 
-// Campeão do mês que acabou: uma vez, no dia 1 a partir das 9h
+// Campeão do ciclo que acabou: uma vez, no dia 26 a partir das 9h
 export function campeaoPendente(agora = new Date()) {
     const dia = hoje(agora);
     const hora = Number(agora.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false }));
-    if (!dia.endsWith('-01') || hora < 9) return null;
-    const mesPassado = mesDe(ontem(dia));
-    if (db.prepare('SELECT 1 FROM estado WHERE chave = ?').get(`campeao_${mesPassado}`)) return null;
-    db.prepare('INSERT OR REPLACE INTO estado (chave, valor) VALUES (?, ?)').run(`campeao_${mesPassado}`, dia);
-    const ranking = rankingMes(mesPassado);
-    return ranking.length ? { mes: mesPassado, ranking } : null;
+    if (!dia.endsWith('-26') || hora < 9) return null;
+    const ciclo = cicloDe(ontem(dia));
+    if (db.prepare('SELECT 1 FROM estado WHERE chave = ?').get(`campeao_${ciclo.inicio}`)) return null;
+    db.prepare('INSERT OR REPLACE INTO estado (chave, valor) VALUES (?, ?)').run(`campeao_${ciclo.inicio}`, dia);
+    const ranking = rankingMes(ciclo);
+    return ranking.length ? { ciclo, ranking } : null;
 }
 
 // ---------- Comandos do Zap: !treino (com foto) · !gym · !apagartreino ----------
@@ -119,7 +141,7 @@ export async function ativarGym(sock, msg, ids, config) {
     return responder('🏋️ *Gym Rats ativado neste grupo!*\nManda a foto do treino com a legenda *!treino* — 1 treino por dia = 1 ponto.\n*!gym* — ranking do mês · *!site* — página com ranking e fotos (com senha)\n\nPra contar ponto, cada um precisa ter o número vinculado ao Discord do Regresso (*!vincular*).');
 }
 
-export const AJUDA_GYM = '🏋️ *Gym Rats*\nManda a foto do treino com a legenda *!treino* (dá pra escrever o que treinou: *!treino perna*) — 1 treino por dia = 1 ponto\n*!gym* — ranking do mês e sequências 🔥\n*!apagartreino* — apaga o check-in de hoje\n*!site* — página com ranking e mural de fotos (pede a senha do grupo)';
+export const AJUDA_GYM = '🏋️ *Gym Rats*\nManda a foto do treino com a legenda *!treino* (dá pra escrever o que treinou: *!treino perna*) — 1 treino por dia = 1 ponto, no máximo 5 por semana (seg a dom)\n*!gym* — ranking do ciclo (26 a 25) e sequências 🔥\n*!apagartreino* — apaga o check-in de hoje\n*!site* — página com ranking e mural de fotos (pede a senha do grupo)';
 
 // Campeão do mês no grupo do Gym Rats (dia 1, 9h)
 export async function anunciarCampeao(sock) {
@@ -128,7 +150,7 @@ export async function anunciarCampeao(sock) {
     const c = campeaoPendente();
     if (!c) return;
     const top = c.ranking.slice(0, 5).map(r => `${r.posicao <= 3 ? ['🥇', '🥈', '🥉'][r.posicao - 1] : `${r.posicao}.`} *${r.nome}* — ${r.pontos} treinos`).join('\n');
-    await sock.sendMessage(grupo, { text: `🏆 *Gym Rats de ${nomeMes(c.mes)}*\nCampeão: *${c.ranking[0].nome}* com ${c.ranking[0].pontos} treinos!\n\n${top}\n\nO ranking zerou: bora pro mês novo 💪` });
+    await sock.sendMessage(grupo, { text: `🏆 *Gym Rats — ciclo ${nomeCiclo(c.ciclo)}*\nCampeão: *${c.ranking[0].nome}* com ${c.ranking[0].pontos} treinos!\n\n${top}\n\nO ranking zerou: bora pro ciclo novo 💪` });
 }
 
 export async function tratarGym(sock, msg, ids, texto) {
@@ -141,7 +163,7 @@ export async function tratarGym(sock, msg, ids, texto) {
     if (cmd === 'gym' || cmd === 'academia') {
         const r = rankingMes();
         const linhas = r.slice(0, 15).map(x => `${x.posicao <= 3 ? ['🥇', '🥈', '🥉'][x.posicao - 1] : `${x.posicao}.`} *${x.nome}* — ${x.pontos}${x.sequencia >= 2 ? ` · 🔥${x.sequencia}` : ''}`);
-        return responder(`🏋️ *Gym Rats — ${nomeMes(hoje().slice(0, 7))}*\n${linhas.join('\n') || 'Ninguém treinou ainda este mês. Manda a foto com *!treino* 💪'}\n\n1 treino por dia = 1 ponto`);
+        return responder(`🏋️ *Gym Rats — ${nomeCiclo(cicloDe())}*\n${linhas.join('\n') || 'Ninguém treinou ainda neste ciclo. Manda a foto com *!treino* 💪'}\n\n1 treino por dia = 1 ponto · máx. ${MAX_SEMANA} por semana (seg a dom)`);
     }
     if (!v) return responder('Pra entrar no Gym Rats, vincule seu Discord: use /zap no Discord e mande *!vincular CÓDIGO* aqui.');
     if (cmd === 'apagartreino') return responder(apagarHoje(v.discord_id) ? '🗑️ Check-in de hoje apagado.' : 'Você não tem check-in hoje.');
@@ -154,7 +176,7 @@ export async function tratarGym(sock, msg, ids, texto) {
         const legenda = texto.trim().replace(/^\S+\s*/, '');
         const res = await registrar({ userId: v.discord_id, nome: v.nome, foto, legenda, origem: 'zap' });
         if (!res.ok) return responder(res.motivo);
-        return responder(`💪 *${v.nome}* treinou! ${res.pontos} ponto${res.pontos > 1 ? 's' : ''} no mês · ${res.posicao}º de ${res.total}${res.sequencia >= 2 ? ` · 🔥 ${res.sequencia} dias seguidos` : ''}`);
+        return responder(`💪 *${v.nome}* treinou! ${res.pontos} ponto${res.pontos > 1 ? 's' : ''} no ciclo · ${res.posicao}º de ${res.total} · ${res.semana}/${MAX_SEMANA} na semana${res.sequencia >= 2 ? ` · 🔥 ${res.sequencia} dias seguidos` : ''}`);
     } catch (e) {
         console.error('Gym Rats:', e.message);
         return responder('⚠️ Não consegui salvar a foto do treino. Tenta de novo.');
