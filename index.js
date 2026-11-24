@@ -20,6 +20,14 @@ import { tratarRoleta, COMANDOS_ROLETA } from './roleta.js';
 import path from 'node:path';
 import { rotaWrapped, tratarWrapped, verificarWrapped, COMANDOS_WRAPPED } from './wrapped.js';
 
+// A biblioteca de criptografia do WhatsApp imprime as chaves da sessão no log ("Closing session: {...}").
+// Isso é sensível e só polui o log da Hostinger: descarta essas linhas.
+const infoOriginal = console.info;
+console.info = (...args) => {
+    if (typeof args[0] === 'string' && /^(Closing (open )?session|Opening session|Removing old closed session|Session already)/.test(args[0])) return;
+    infoOriginal(...args);
+};
+
 const logger = pino({ level: 'silent' });
 let estado = 'iniciando';
 let sock = null;
