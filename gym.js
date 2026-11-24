@@ -100,7 +100,36 @@ import { downloadMediaMessage } from 'baileys';
 import { desembrulhar, citada } from './figurinha.js';
 import { quemE } from './bancos.js';
 
-export const COMANDOS_GYM = ['treino', 'treinei', 'gym', 'academia', 'apagartreino'];
+export const COMANDOS_GYM = ['treino', 'treinei', 'gym', 'academia', 'apagartreino', 'site'];
+// Comandos que funcionam no grupo do Gym Rats (o bot ignora o resto lá)
+export const PERMITIDOS_NO_GRUPO_GYM = [...COMANDOS_GYM, 'vincular', 'ajuda', 'help', 'menu'];
+
+// O grupo do Gym Rats é definido por um admin do grupo com !ativargym (fica no banco do gym)
+export const grupoGym = () => db.prepare("SELECT valor FROM estado WHERE chave = 'grupo'").get()?.valor ?? null;
+
+export async function ativarGym(sock, msg, ids, config) {
+    const chat = msg.key.remoteJid;
+    const responder = text => sock.sendMessage(chat, { text }, { quoted: msg });
+    if (!chat.endsWith('@g.us')) return responder('Use *!ativargym* dentro do grupo do Gym Rats.');
+    if (chat === config.grupoId) return responder('Esse é o grupo do Regresso. O Gym Rats funciona só no grupo do treino.');
+    const meta = await sock.groupMetadata(chat).catch(() => null);
+    const admin = meta?.participants?.some(p => ids.includes(p.id) || ids.includes(p.phoneNumber) || ids.includes(p.lid) ? Boolean(p.admin) : false);
+    if (!admin) return responder('Só admin do grupo pode ativar o Gym Rats aqui.');
+    db.prepare("INSERT OR REPLACE INTO estado (chave, valor) VALUES ('grupo', ?)").run(chat);
+    return responder('🏋️ *Gym Rats ativado neste grupo!*\nManda a foto do treino com a legenda *!treino* — 1 treino por dia = 1 ponto.\n*!gym* — ranking do mês · *!site* — página com ranking e fotos (com senha)\n\nPra contar ponto, cada um precisa ter o número vinculado ao Discord do Regresso (*!vincular*).');
+}
+
+export const AJUDA_GYM = '🏋️ *Gym Rats*\nManda a foto do treino com a legenda *!treino* (dá pra escrever o que treinou: *!treino perna*) — 1 treino por dia = 1 ponto\n*!gym* — ranking do mês e sequências 🔥\n*!apagartreino* — apaga o check-in de hoje\n*!site* — página com ranking e mural de fotos (pede a senha do grupo)';
+
+// Campeão do mês no grupo do Gym Rats (dia 1, 9h)
+export async function anunciarCampeao(sock) {
+    const grupo = grupoGym();
+    if (!grupo) return;
+    const c = campeaoPendente();
+    if (!c) return;
+    const top = c.ranking.slice(0, 5).map(r => `${r.posicao <= 3 ? ['🥇', '🥈', '🥉'][r.posicao - 1] : `${r.posicao}.`} *${r.nome}* — ${r.pontos} treinos`).join('\n');
+    await sock.sendMessage(grupo, { text: `🏆 *Gym Rats de ${nomeMes(c.mes)}*\nCampeão: *${c.ranking[0].nome}* com ${c.ranking[0].pontos} treinos!\n\n${top}\n\nO ranking zerou: bora pro mês novo 💪` });
+}
 
 export async function tratarGym(sock, msg, ids, texto) {
     const chat = msg.key.remoteJid;
@@ -108,6 +137,7 @@ export async function tratarGym(sock, msg, ids, texto) {
     const cmd = texto.trim().slice(1).split(/\s+/)[0].toLowerCase();
     const v = quemE(ids);
 
+    if (cmd === 'site') return responder('🌐 https://regresso.mrbnexus.com.br/gym\nA senha é a do grupo (pergunta pro Maique).');
     if (cmd === 'gym' || cmd === 'academia') {
         const r = rankingMes();
         const linhas = r.slice(0, 15).map(x => `${x.posicao <= 3 ? ['🥇', '🥈', '🥉'][x.posicao - 1] : `${x.posicao}.`} *${x.nome}* — ${x.pontos}${x.sequencia >= 2 ? ` · 🔥${x.sequencia}` : ''}`);

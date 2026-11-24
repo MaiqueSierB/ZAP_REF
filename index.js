@@ -12,7 +12,7 @@ import { pegarTrava } from './trava.js';
 import { postarEventos } from './aovivo.js';
 import { verificarRetro } from './retro.js';
 import { verificarEpic } from './epic.js';
-import { tratarGym, COMANDOS_GYM } from './gym.js';
+import { tratarGym, ativarGym, anunciarCampeao, grupoGym, COMANDOS_GYM, PERMITIDOS_NO_GRUPO_GYM, AJUDA_GYM } from './gym.js';
 import { tratarFigurinha, tratarPrint, lembrarNome, COMANDOS_FIGURINHA, COMANDOS_PRINT } from './figurinha.js';
 import { tratarEnquete, COMANDOS_ENQUETE } from './enquete.js';
 import { enviarLembretes } from './lembretes.js';
@@ -106,6 +106,7 @@ async function conectar() {
                 verificarRetro(sock).catch(e => console.error('Retrospectiva:', e.message));
                 verificarEpic(sock).catch(e => console.error('Jogos grátis:', e.message));
                 verificarWrapped(sock).catch(e => console.error('Wrapped:', e.message));
+                anunciarCampeao(sock).catch(e => console.error('Gym Rats:', e.message));
             };
             setTimeout(checar, 10_000);
             if (!globalThis.timerAniversarios) globalThis.timerAniversarios = setInterval(checar, 30 * 60_000);
@@ -163,7 +164,12 @@ async function conectar() {
                 for (const id of [msg.key.participant, msg.key.participantAlt, grupo ? null : chatId]) lembrarNome(id, msg.pushName);
                 if (!texto.startsWith(config.prefixo)) continue;
                 const cmd = texto.trim().slice(config.prefixo.length).split(/\s+/)[0].toLowerCase();
-                if (grupo && config.grupoId && chatId !== config.grupoId && cmd !== 'id') continue;
+                // Grupo do Gym Rats: só os comandos de treino (e !vincular / !ajuda)
+                const noGym = grupo && chatId === grupoGym();
+                if (noGym && !PERMITIDOS_NO_GRUPO_GYM.includes(cmd)) continue;
+                if (grupo && config.grupoId && chatId !== config.grupoId && !noGym && !['id', 'ativargym'].includes(cmd)) continue;
+                // Fora do grupo do treino, os comandos do Gym Rats não fazem nada
+                if (!noGym && COMANDOS_GYM.includes(cmd)) continue;
 
                 // O remetente pode vir como número (@s.whatsapp.net) ou id oculto (@lid).
                 const ids = [...new Set((grupo
@@ -185,6 +191,14 @@ async function conectar() {
                 }
 
                 // Figurinha precisa da mensagem inteira (foto/vídeo), não só do texto
+                if (cmd === 'ativargym') {
+                    await ativarGym(sock, msg, ids, config);
+                    continue;
+                }
+                if (noGym && ['ajuda', 'help', 'menu'].includes(cmd)) {
+                    await sock.sendMessage(chatId, { text: AJUDA_GYM }, { quoted: msg });
+                    continue;
+                }
                 if (COMANDOS_GYM.includes(cmd)) {
                     await tratarGym(sock, msg, ids, texto);
                     continue;
