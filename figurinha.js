@@ -23,7 +23,7 @@ export function lembrarNome(id, nome) {
     if (id && nome) nomes.set(id, nome);
 }
 
-function desembrulhar(m) {
+export function desembrulhar(m) {
     for (const k of ['ephemeralMessage', 'viewOnceMessage', 'viewOnceMessageV2', 'documentWithCaptionMessage']) {
         if (m?.[k]?.message) m = m[k].message;
     }
@@ -34,7 +34,7 @@ const textoDe = m => m?.conversation || m?.extendedTextMessage?.text || m?.image
 const temMidia = m => m?.imageMessage || m?.videoMessage || m?.stickerMessage;
 
 // Mensagem respondida (citada), se houver
-function citada(msg) {
+export function citada(msg) {
     const m = desembrulhar(msg.message);
     const ctx = m?.extendedTextMessage?.contextInfo || m?.imageMessage?.contextInfo || m?.videoMessage?.contextInfo;
     if (!ctx?.quotedMessage) return null;

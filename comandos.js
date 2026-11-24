@@ -71,6 +71,10 @@ ${P}enquete <pergunta> | <opção 1> | <opção 2> — ${P}enquete+ deixa marcar
 *🎡 Sorteio*
 ${P}sorteio <opção 1>, <opção 2>, <opção 3> — vai eliminando até sobrar a vencedora
 
+*🏋️ Gym Rats*
+Manda a foto do treino com a legenda *${P}treino* — 1 treino por dia = 1 ponto
+${P}gym — ranking do mês · ${P}apagartreino — apaga o de hoje
+
 *🎁 Retrospectiva do ano*
 ${P}wrapped — a do grupo · ${P}wrapped eu — a sua
 

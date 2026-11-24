@@ -12,6 +12,7 @@ import { pegarTrava } from './trava.js';
 import { postarEventos } from './aovivo.js';
 import { verificarRetro } from './retro.js';
 import { verificarEpic } from './epic.js';
+import { tratarGym, COMANDOS_GYM } from './gym.js';
 import { tratarFigurinha, tratarPrint, lembrarNome, COMANDOS_FIGURINHA, COMANDOS_PRINT } from './figurinha.js';
 import { tratarEnquete, COMANDOS_ENQUETE } from './enquete.js';
 import { enviarLembretes } from './lembretes.js';
@@ -184,6 +185,10 @@ async function conectar() {
                 }
 
                 // Figurinha precisa da mensagem inteira (foto/vídeo), não só do texto
+                if (COMANDOS_GYM.includes(cmd)) {
+                    await tratarGym(sock, msg, ids, texto);
+                    continue;
+                }
                 if (COMANDOS_FIGURINHA.includes(cmd)) {
                     await tratarFigurinha(sock, msg, ids[0], texto);
                     continue;
